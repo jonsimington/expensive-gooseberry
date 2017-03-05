@@ -15,7 +15,7 @@ class AI(BaseAI):
             str: The name of your Player.
         """
 
-        return "Chess Python Player"  # REPLACE THIS WITH YOUR TEAM NAME
+        return "The Wildcats!"  # REPLACE THIS WITH YOUR TEAM NAME
 
     def start(self):
         """ This is called once the game starts and your AI knows its playerID
@@ -72,9 +72,14 @@ class AI(BaseAI):
 
         # 4) make a random (and probably invalid) move.
         random_piece = random.choice(self.player.pieces)
-        random_file = chr(ord("a") + random.randrange(8))
-        random_rank = random.randrange(8) + 1
-        random_piece.move(random_file, random_rank)
+        #random_file = chr(ord("a") + random.randrange(8))
+        #random_rank = random.randrange(8) + 1
+        #random_piece.move(random_file, random_rank)
+
+        for x in (self.player.pieces):
+            if x.type == "Pawn":
+                x.move(x.file, x.rank + self.player._rank_direction)
+                break
 
         return True  # to signify we are done with our turn.
 

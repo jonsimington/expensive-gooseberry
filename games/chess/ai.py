@@ -6,8 +6,9 @@ from games.chess.state import state
 from games.chess.state import piece
 from games.chess.state import move
 from games.chess.state import find_actions
+from games.chess.state import player
 
-current_state = state()
+current_state = (None)
 
 class AI(BaseAI):
     """ The basic AI functions that are the same between games. """
@@ -27,11 +28,14 @@ class AI(BaseAI):
         and game. You can initialize your AI here.
         """
 
+        me = player(self.player._in_check,self.player._rank_direction)
+        #init state with current player
+        current_state = state(me)
         #read in starting board of game
         #need to check for castling and en passant of FEN string
         for p in self.game.pieces:
-            new_p = piece(p.type, p.rank, p.file, p.owner, p.id)
-            current_state.addToBoard(new_p,new_p.getKey())
+            new_p = piece(p.type, p.file, p.rank, p.owner, p.id, p.has_moved)
+            current_state.addToBoard(new_p,new_p.key)
 
         #print(current_state.getPieces().get("a1").getType())
 
@@ -67,6 +71,10 @@ class AI(BaseAI):
 
         # Here is where you'll want to code your AI.
 
+
+        me = player(self.player._in_check, self.player._rank_direction)
+        #read in player at start of turn, check for in check
+        current_state = state(me)
         #read in game board pieces, add to state
 
         #reset game board
@@ -74,12 +82,12 @@ class AI(BaseAI):
 
         #copy in board state to dictionary
         for p in self.game.pieces:
-            new_p = piece(p.type, p.rank, p.file, p.owner, p.id)
-            current_state.addToBoard(new_p,new_p.getKey())
+            new_p = piece(p.type, p.file, p.rank, p.owner, p.id, p.has_moved)
+            current_state.addToBoard(new_p,new_p.key)
 
         #copy my own pieces to a list
         for p in self.player.pieces:
-            my_p = piece(p.type, p.rank, p.file, p.owner, p.id)
+            my_p = piece(p.type, p.file, p.rank, p.owner, p.id, p.has_moved)
             current_state.addPieces(my_p)
 
         # 1) print the board to the console
@@ -93,12 +101,13 @@ class AI(BaseAI):
         print("Time Remaining: " + str(self.player.time_remaining) + " ns")
 
         # 4) make a random (and probably invalid) move.
-        random_piece = random.choice(self.player.pieces)
+        #random_piece = random.choice(self.player.pieces)
         # random_file = chr(ord("a") + random.randrange(8))
         # random_rank = random.randrange(8) + 1
         # random_piece.move(random_file, random_rank)
 
-        nextMove = find_actions(current_state)
+        validMoves = find_actions(current_state)
+        randMove = random.choice(validMoves)
 
         '''
         for x in (self.player.pieces):
@@ -108,8 +117,8 @@ class AI(BaseAI):
         '''
 
         for x in (self.player.pieces):
-            if x.id == nextMove.piece.id:
-                x.move(chr(ord(x.file) + nextMove.coords[1]), x.rank + self.player._rank_direction * nextMove.coords[0])
+            if x.id == randMove.piece.id:
+                x.move(randMove.file, randMove.rank)
 
         return True  # to signify we are done with our turn.
 

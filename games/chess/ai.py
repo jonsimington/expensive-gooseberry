@@ -2,7 +2,12 @@
 
 from joueur.base_ai import BaseAI
 import random
+from games.chess.state import state
+from games.chess.state import piece
+from games.chess.state import move
+from games.chess.state import find_actions
 
+current_state = state()
 
 class AI(BaseAI):
     """ The basic AI functions that are the same between games. """
@@ -21,6 +26,14 @@ class AI(BaseAI):
         """ This is called once the game starts and your AI knows its playerID
         and game. You can initialize your AI here.
         """
+
+        #read in starting board of game
+        #need to check for castling and en passant of FEN string
+        for p in self.game.pieces:
+            new_p = piece(p.type, p.rank, p.file, p.owner, p.id)
+            current_state.addToBoard(new_p,new_p.getKey())
+
+        #print(current_state.getPieces().get("a1").getType())
 
         # replace with your start logic
 
@@ -54,11 +67,20 @@ class AI(BaseAI):
 
         # Here is where you'll want to code your AI.
 
-        # We've provided sample code that:
-        #    1) prints the board to the console
-        #    2) prints the opponent's last move to the console
-        #    3) prints how much time remaining this AI has to calculate moves
-        #    4) makes a random (and probably invalid) move.
+        #read in game board pieces, add to state
+
+        #reset game board
+        current_state.resetState()
+
+        #copy in board state to dictionary
+        for p in self.game.pieces:
+            new_p = piece(p.type, p.rank, p.file, p.owner, p.id)
+            current_state.addToBoard(new_p,new_p.getKey())
+
+        #copy my own pieces to a list
+        for p in self.player.pieces:
+            my_p = piece(p.type, p.rank, p.file, p.owner, p.id)
+            current_state.addPieces(my_p)
 
         # 1) print the board to the console
         self.print_current_board()
@@ -72,14 +94,22 @@ class AI(BaseAI):
 
         # 4) make a random (and probably invalid) move.
         random_piece = random.choice(self.player.pieces)
-        #random_file = chr(ord("a") + random.randrange(8))
-        #random_rank = random.randrange(8) + 1
-        #random_piece.move(random_file, random_rank)
+        # random_file = chr(ord("a") + random.randrange(8))
+        # random_rank = random.randrange(8) + 1
+        # random_piece.move(random_file, random_rank)
+
+        nextMove = find_actions(current_state)
+
+        '''
+        for x in (self.player.pieces):
+            if x.type == "Knight":
+                x.move(chr(ord(x.file) + 1), x.rank + self.player._rank_direction * 2)
+                break
+        '''
 
         for x in (self.player.pieces):
-            if x.type == "Pawn":
-                x.move(x.file, x.rank + self.player._rank_direction)
-                break
+            if x.id == nextMove.piece.id:
+                x.move(chr(ord(x.file) + nextMove.coords[1]), x.rank + self.player._rank_direction * nextMove.coords[0])
 
         return True  # to signify we are done with our turn.
 

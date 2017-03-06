@@ -190,6 +190,24 @@ def find_actions(state):
                         for proT in promoteTypes():
                             newMove = move(x, newFile, newRank, proT)
                             possibleMoves.append(newMove)
+        if x.type == "Knight":
+            #knight can move manhattan distance of 3, just not in a straight line
+            #check all locations in a 5x5 square around knight with man_dist = 3
+            #knight can go there as long as my piece isn't already there
+            for r in range (x.rank-2, x.rank+2,1):
+                for f in range (ord(x.file)-2, ord(x.file)+2, 1):
+                    #location must be on the board
+                    if(r >= 1 and r <= 8 and f >= ord('a') and f <= ord('h')):
+                        #location must be man_dist of 3 away
+                        if(man_dist(ord(x.file), x.rank, f, r) == 3):
+                            keyCheck = coord_to_key(chr(f),r)
+                            #valid move as long as my piece isn't there
+                            capPiece = state.board.get(keyCheck)
+                            if(capPiece == None or capPiece.owner.id != state.player.id):
+                                newMove = move(x,chr(f),r)
+                                possibleMoves.append(newMove)
+
+
 
     return possibleMoves
             #x.move(chr(ord(x.file) + 1), x.rank + self.player._rank_direction * 2)
@@ -201,4 +219,7 @@ def coord_to_key(file, rank):
 
 def promoteTypes():
     return ('Queen', 'Knight', 'Rook', 'Bishop')
+
+def man_dist(file1, rank1, file2, rank2):
+    return abs(file1 - file2) + abs(rank1 - rank2)
 

@@ -114,14 +114,18 @@ class move:
     _rank = 0
     _file = 0
     _moveCoords = []
+    _proType = None
 
-    def __init__(self, piece, file, rank):
+
+    def __init__(self, piece, file, rank, proType = None):
         self._piece = piece
         self._rank = rank
         self._file = file
         self._moveCoords.clear()
         self._moveCoords.append(rank)
         self._moveCoords.append(file)
+        if proType != None:
+            self._proType = proType
 
     @property
     def coords(self):
@@ -138,6 +142,10 @@ class move:
     @property
     def rank(self):
         return self._rank
+
+    @property
+    def proType(self):
+        return self._proType
 
 
 def find_actions(state):
@@ -156,25 +164,32 @@ def find_actions(state):
             #typical one square move
             newRank = x.rank + state.player.dir
             keyCheck = coord_to_key(x.file, newRank)
+            #move forward
             if(state.board.get(keyCheck) == None):
-                if(newRank >= 1 and newRank <= 8 ):
+                if(newRank > 1 and newRank < 8 ):
                     newMove = move(x, x.file, newRank)
                     possibleMoves.append(newMove)
+                #promote pawn if at edge
+                elif(newRank == 1 or newRank == 8):
+                    for proT in promoteTypes():
+                        newMove = move(x, x.file, newRank, proT)
+                        possibleMoves.append(newMove)
             #pawn capturing, file +/- 1
-            print("checking pawn cap")
             for off in range (-1,2,2):
                 newRank = x.rank + state.player.dir
                 newFile = chr(ord(x.file) + off)
                 keyCheck = coord_to_key(newFile, newRank)
-                print("capture check at ",keyCheck)
                 capPiece = state.board.get(keyCheck)
-                if capPiece != None:
-                    print("something is there")
+                #capture the piece if it's there
                 if(capPiece != None and capPiece.owner.id != state.player.id):
-                    print("pawn can capture")
-                    newMove = move(x, newFile, newRank)
-                    possibleMoves.append(newMove)
-
+                    if (newRank > 1 and newRank < 8):
+                        newMove = move(x, newFile, newRank)
+                        possibleMoves.append(newMove)
+                    #capture piece and promote pawn if edge board
+                    elif (newRank == 1 or newRank == 8):
+                        for proT in promoteTypes():
+                            newMove = move(x, newFile, newRank, proT)
+                            possibleMoves.append(newMove)
 
     return possibleMoves
             #x.move(chr(ord(x.file) + 1), x.rank + self.player._rank_direction * 2)
@@ -183,4 +198,7 @@ def find_actions(state):
 
 def coord_to_key(file, rank):
     return (str(file) + str(rank))
+
+def promoteTypes():
+    return ('Queen', 'Knight', 'Rook', 'Bishop')
 

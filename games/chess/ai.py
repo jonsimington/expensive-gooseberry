@@ -113,6 +113,10 @@ class AI(BaseAI):
             print("no valid moves to make")
 
         '''
+        goFile = randMove.file
+        goRank = randMove.rank
+        goProT = randMove.proType
+
         for x in (self.player.pieces):
             if x.type == "Knight":
                 x.move(chr(ord(x.file) + 1), x.rank + self.player._rank_direction * 2)
@@ -121,7 +125,10 @@ class AI(BaseAI):
 
         for x in (self.player.pieces):
             if x.id == randMove.piece.id:
-                x.move(randMove.file, randMove.rank)
+                if(randMove.proType != None):
+                    x.move(randMove.file, randMove.rank, randMove.proType)
+                else:
+                    x.move(randMove.file, randMove.rank)
 
         return True  # to signify we are done with our turn.
 

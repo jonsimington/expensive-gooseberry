@@ -21,14 +21,14 @@ class AI(BaseAI):
             str: The name of your Player.
         """
 
-        return "The Wildcats!"  # REPLACE THIS WITH YOUR TEAM NAME
+        return "The Wildcats! feat. Wallace James Haviland III"  # REPLACE THIS WITH YOUR TEAM NAME
 
     def start(self):
         """ This is called once the game starts and your AI knows its playerID
         and game. You can initialize your AI here.
         """
 
-        me = player(self.player._in_check,self.player._rank_direction)
+        me = player(self.player.in_check,self.player.rank_direction, self.player.name, self.player.id)
         #init state with current player
         current_state = state(me)
         #read in starting board of game
@@ -72,7 +72,7 @@ class AI(BaseAI):
         # Here is where you'll want to code your AI.
 
 
-        me = player(self.player._in_check, self.player._rank_direction)
+        me = player(self.player.in_check, self.player.rank_direction, self.player.name, self.player.id)
         #read in player at start of turn, check for in check
         current_state = state(me)
         #read in game board pieces, add to state
@@ -107,7 +107,10 @@ class AI(BaseAI):
         # random_piece.move(random_file, random_rank)
 
         validMoves = find_actions(current_state)
-        randMove = random.choice(validMoves)
+        if len(validMoves)>0:
+            randMove = random.choice(validMoves)
+        else:
+            print("no valid moves to make")
 
         '''
         for x in (self.player.pieces):

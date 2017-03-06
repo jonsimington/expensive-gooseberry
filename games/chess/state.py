@@ -40,15 +40,23 @@ class piece:
     def moved(self):
         return self._has_moved
 
+    @property
+    def owner(self):
+        return self._owner
+
 
 class player:
     _in_check = False
     _rank_direction = 0
+    _name = ""
+    _id = ""
 
 
-    def __init__(self, check, dir):
+    def __init__(self, check, dir, name, id):
         self._rank_direction = dir
         self._in_check = check
+        self._name = name
+        self._id = id
 
     @property
     def check(self):
@@ -57,6 +65,14 @@ class player:
     @property
     def dir(self):
         return self._rank_direction
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def id(self):
+        return self._id
 
 
 class state:
@@ -125,20 +141,39 @@ class move:
 
 
 def find_actions(state):
+    print("finding actions")
     possibleMoves = []
     for x in (state.pieces):
         if x.type == "Pawn":
+            #2 square opening move
             if(x.moved == False):
                 newRank = x.rank + 2 * state.player.dir
                 keyCheck = coord_to_key(x.file, newRank)
-                if(state.board.get(keyCheck) == None):
+                key2 = coord_to_key(x.file, x.rank + state.player.dir)
+                if(state.board.get(keyCheck) == None and state.board.get(key2) == None):
                     newMove = move(x, x.file, newRank)
                     possibleMoves.append(newMove)
+            #typical one square move
             newRank = x.rank + state.player.dir
             keyCheck = coord_to_key(x.file, newRank)
             if(state.board.get(keyCheck) == None):
-                newMove = move(x, x.file, newRank)
-                possibleMoves.append(newMove)
+                if(newRank >= 1 and newRank <= 8 ):
+                    newMove = move(x, x.file, newRank)
+                    possibleMoves.append(newMove)
+            #pawn capturing, file +/- 1
+            print("checking pawn cap")
+            for off in range (-1,2,2):
+                newRank = x.rank + state.player.dir
+                newFile = chr(ord(x.file) + off)
+                keyCheck = coord_to_key(newFile, newRank)
+                print("capture check at ",keyCheck)
+                capPiece = state.board.get(keyCheck)
+                if capPiece != None:
+                    print("something is there")
+                if(capPiece != None and capPiece.owner.id != state.player.id):
+                    print("pawn can capture")
+                    newMove = move(x, newFile, newRank)
+                    possibleMoves.append(newMove)
 
 
     return possibleMoves
@@ -147,5 +182,5 @@ def find_actions(state):
 
 
 def coord_to_key(file, rank):
-    return str(file) + str(rank)
+    return (str(file) + str(rank))
 

@@ -207,6 +207,20 @@ def find_actions(state):
                                 newMove = move(x,chr(f),r)
                                 possibleMoves.append(newMove)
 
+        if x.type == "Rook":
+            #rook can move horizontal/vertical until it hits another piece or edge of the board
+            #check from the rook in all 4 directions for valid moves
+            cross_moves = check_crossway(state, x.file, x.rank)
+            if cross_moves != None:
+                for cross_move in cross_moves:
+                    newMove = move(x, cross_move[0], cross_move[1])
+                    possibleMoves.append(newMove)
+
+        if x.type == "Bishop":
+            #bishop can move diagonally in any direction
+            diagonal_moves = check_diagonal(state, x.file, x.rank)
+
+
 
 
     return possibleMoves
@@ -222,4 +236,55 @@ def promoteTypes():
 
 def man_dist(file1, rank1, file2, rank2):
     return abs(file1 - file2) + abs(rank1 - rank2)
+
+def check_crossway(state, p_file, p_rank):
+    #print("rook at: ", p_file, p_rank)
+    f_ranges = []
+    r_ranges = []
+    #ranges have (start, stop, increment value)
+    if (p_file != 'h'):
+        f_ranges.append((chr(ord(p_file) + 1), 'i', 1))
+    if (p_file != 'a'):
+        f_ranges.append((chr(ord(p_file) - 1), chr(ord('a') - 1), -1))
+    if (p_rank != 8):
+        r_ranges.append((p_rank + 1, 9, 1))
+    if (p_rank != 1):
+        r_ranges.append((p_rank - 1, 0, -1))
+
+    valid_move_locations = []
+    #list of tuples, (file, rank)
+
+    for f_range in f_ranges:
+        for f in range (ord(f_range[0]), ord(f_range[1]), f_range[2]):
+            key = coord_to_key(chr(f), p_rank)
+            #valid move if empty space
+            if state.board.get(key) == None:
+                valid_move_locations.append((chr(f), p_rank))
+            #valid move if opponent piece, break after
+            elif state.board.get(key).owner.id != state.player.id:
+                valid_move_locations.append((chr(f), p_rank))
+                break
+            elif state.board.get(key).owner.id == state.player.id:
+                break
+
+
+    for r_range in r_ranges:
+        for r in range (r_range[0], r_range[1], r_range[2]):
+            key = coord_to_key(p_file, r)
+            if state.board.get(key) == None:
+                valid_move_locations.append((p_file, r))
+            elif state.board.get(key).owner.id != state.player.id:
+                valid_move_locations.append((p_file, r))
+                break
+            elif state.board.get(key).owner.id == state.player.id:
+                break
+    #print ("valid move locations: ", end='')
+    #print (valid_move_locations)
+    #print ("rook has {} moves".format(len(valid_move_locations)))
+
+    return valid_move_locations
+
+def check_diagonal(state, p_file, p_rank):
+    print ("checking diagonal!")
+
 

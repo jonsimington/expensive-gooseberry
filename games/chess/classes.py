@@ -21,7 +21,7 @@ class piece:
         return self._key
 
     def set_key(self):
-        self._key = str(self._file) + str(self.rank)
+        self._key = str(self._file) + str(self._rank)
 
     @property
     def type(self):
@@ -47,6 +47,9 @@ class piece:
     def owner(self):
         return self._owner
 
+    def toString(self):
+        pieceString = self._owner.color + self._type + "@" + self._file + str(self._rank)
+        return pieceString
 
 class player:
     _in_check = False

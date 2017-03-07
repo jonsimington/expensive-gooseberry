@@ -12,12 +12,13 @@ def find_actions(state, pieces):
         if x.type == "Pawn":
             #2 square opening move
             if(x.moved == False):
-                newRank = x.rank + 2 * state.player.dir
-                keyCheck = coord_to_key(x.file, newRank)
-                key2 = coord_to_key(x.file, x.rank + state.player.dir)
-                if(state.board.get(keyCheck) == None and state.board.get(key2) == None):
-                    newMove = move(x, x.file, newRank)
-                    possibleMoves.append(newMove)
+                if(x.owner.color == "White" and x.rank == 2) or (x.owner.color == "Black" and x.rank == 7):
+                    newRank = x.rank + 2 * state.player.dir
+                    keyCheck = coord_to_key(x.file, newRank)
+                    key2 = coord_to_key(x.file, x.rank + state.player.dir)
+                    if(state.board.get(keyCheck) == None and state.board.get(key2) == None):
+                        newMove = move(x, x.file, newRank)
+                        possibleMoves.append(newMove)
             #typical one square move
             newRank = x.rank + state.player.dir
             keyCheck = coord_to_key(x.file, newRank)
@@ -196,12 +197,15 @@ def check_crossway(state, p_file, p_rank):
             #valid move if empty space
             if state.board.get(key) == None:
                 valid_move_locations.append((chr(f), p_rank))
+                #print("empty space:",key)
             #valid move if opponent piece, break after
             elif state.board.get(key).owner.id != state.player.id:
                 valid_move_locations.append((chr(f), p_rank))
+                #print("capture piece:", key)
                 break
             #cannot move into my own piece
             elif state.board.get(key).owner.id == state.player.id:
+                #print("same piece owner:", key)
                 break
 
 
@@ -211,12 +215,15 @@ def check_crossway(state, p_file, p_rank):
             #empty space
             if state.board.get(key) == None:
                 valid_move_locations.append((p_file, r))
+                #print("empty space:", key)
             #capture opponent piece
             elif state.board.get(key).owner.id != state.player.id:
                 valid_move_locations.append((p_file, r))
+                #print("capture piece:", key)
                 break
             #my own piece
             elif state.board.get(key).owner.id == state.player.id:
+                #print("same piece owner:", key)
                 break
 
     return valid_move_locations
@@ -245,15 +252,19 @@ def check_diagonal(state, p_file, p_rank):
         #keep the piece in the board
         while(f >= 'a' and f <= 'h' and r >= 1 and r <= 8):
             key = coord_to_key(f,r)
+           # print("checking:", key)
             #empty space is a valid move
             if(state.board.get(key) == None):
                 valid_move_locations.append((f,r))
+               # print(key, "empty space")
             #opponents piece is valid, but cannot go further
             elif(state.board.get(key).owner.id != state.player.id):
                 valid_move_locations.append((f,r))
+                #print(key, "opp piece here")
                 break
             #cannot go past my own piece
-            else:
+            elif(state.board.get(key).owner.id == state.player.id):
+               # print(key, "my piece here")
                 break
 
             f = chr(ord(f) + diag[0])
@@ -268,6 +279,7 @@ def result(state, move):
     for p in resultant_state.pieces:
         if move.piece.id == p.id:
             del resultant_state.board[p.key]
+            #print("delete", p.toString(), "from board")
             p._rank = move.rank
             p._file = move.file
             #update if pawn is promotoed
@@ -283,16 +295,21 @@ def result(state, move):
                     if oppPiece.id == o.id:
                         resultant_state.oppPieces.remove(o)
             #add piece back to board in new location
-                resultant_state.addPieces(p)
-                resultant_state.addToBoard(p,p.key)
+            #resultant_state.addPieces(p)
+            resultant_state.addToBoard(p,p.key)
             break
 
+    #print("resultant state for move", move.toString(), ":")
+    #print_current_board(resultant_state)
     return resultant_state
 
 
 
 def in_check(state):
     checked = False
+
+    #print("in_check test for this state:")
+    #print_current_board(state)
 
     me = state.player
     myKing = None
@@ -310,7 +327,8 @@ def in_check(state):
 
     for oppMove in opp_actions:
         if oppMove.file == myKing.file and oppMove.rank == myKing.rank:
-            #print("in check!")
+           # print("this move leaves me in check:", oppMove.toString())
+            #print()
             return True
 
     return False
@@ -322,3 +340,53 @@ def in_check(state):
     #for playa in
 
     return checked
+
+
+def print_current_board(state):
+    """Prints the current board using pretty ASCII art
+    Note: you can delete this function if you wish
+    """
+
+    # iterate through the range in reverse order
+    for r in range(9, -2, -1):
+        output = ""
+        if r == 9 or r == 0:
+            # then the top or bottom of the board
+            output = "   +------------------------+"
+        elif r == -1:
+            # then show the ranks
+            output = "     a  b  c  d  e  f  g  h"
+        else:  # board
+            output = " " + str(r) + " |"
+            # fill in all the files with pieces at the current rank
+            allPieces = state.pieces
+            allPieces += state.oppPieces
+            for file_offset in range(0, 8):
+                # start at a, with with file offset increasing the char
+                f = chr(ord("a") + file_offset)
+                current_piece = None
+                for piece in allPieces:
+                    if piece.file == f and piece.rank == r:
+                        # then we found the piece at (file, rank)
+                        current_piece = piece
+                        break
+
+                code = "."  # default "no piece"
+                if current_piece:
+                    # the code will be the first character of their type
+                    # e.g. 'Q' for "Queen"
+                    code = current_piece.type[0]
+
+                    if current_piece.type == "Knight":
+                        # 'K' is for "King", we use 'N' for "Knights"
+                        code = "N"
+
+                    if current_piece.owner.id == "1":
+                        # the second player (black) is lower case.
+                        # Otherwise it's uppercase already
+                        code = code.lower()
+
+                output += " " + code + " "
+
+            output += "|"
+        print(output)

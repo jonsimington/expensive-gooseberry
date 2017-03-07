@@ -107,9 +107,9 @@ class AI(BaseAI):
         # random_piece.move(random_file, random_rank)
 
         validMoves = find_actions(current_state)
-        if len(validMoves)>0:
-            randMove = random.choice(validMoves)
-        else:
+        randMove = random.choice(validMoves)
+
+        if(len(validMoves)==0):
             print("no valid moves to make")
 
         '''

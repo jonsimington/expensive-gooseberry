@@ -194,8 +194,8 @@ def find_actions(state):
             #knight can move manhattan distance of 3, just not in a straight line
             #check all locations in a 5x5 square around knight with man_dist = 3
             #knight can go there as long as my piece isn't already there
-            for r in range (x.rank-2, x.rank+2,1):
-                for f in range (ord(x.file)-2, ord(x.file)+2, 1):
+            for r in range (x.rank-2, x.rank+3,1):
+                for f in range (ord(x.file)-2, ord(x.file)+3, 1):
                     #location must be on the board
                     if(r >= 1 and r <= 8 and f >= ord('a') and f <= ord('h')):
                         #location must be man_dist of 3 away
@@ -224,11 +224,32 @@ def find_actions(state):
                     newMove = move(x, diag_move[0], diag_move[1])
                     possibleMoves.append(newMove)
 
+        if x.type == "Queen":
+            cross_moves = check_crossway(state, x.file, x.rank)
+            diag_moves = check_diagonal(state, x.file, x.rank)
+            queen_moves = cross_moves + diag_moves
 
+            if queen_moves != None:
+                for queen_move in queen_moves:
+                    newMove = move(x, queen_move[0], queen_move[1])
+                    possibleMoves.append(newMove)
+
+        if x.type == "King":
+            for r in range(x.rank - 1, x.rank + 2, 1):
+                for f in range(ord(x.file) - 1, ord(x.file) + 2, 1):
+                    # location must be on the board
+                    if (r >= 1 and r <= 8 and f >= ord('a') and f <= ord('h')):
+                        #not counting it's current position
+                        if(r != x.rank and chr(r) != x.file):
+                            key = coord_to_key(chr(f),r)
+                            capPiece = state.board.get(key)
+                            #King can go to empty space or capture opponent piece
+                            if(capPiece == None or capPiece.owner.id != state.player.id):
+                                newMove = move(x,chr(f),r)
+                                possibleMoves.append(newMove)
 
     return possibleMoves
-            #x.move(chr(ord(x.file) + 1), x.rank + self.player._rank_direction * 2)
-            #break
+
 
 
 def coord_to_key(file, rank):
@@ -267,6 +288,7 @@ def check_crossway(state, p_file, p_rank):
             elif state.board.get(key).owner.id != state.player.id:
                 valid_move_locations.append((chr(f), p_rank))
                 break
+            #cannot move into my own piece
             elif state.board.get(key).owner.id == state.player.id:
                 break
 
@@ -274,28 +296,24 @@ def check_crossway(state, p_file, p_rank):
     for r_range in r_ranges:
         for r in range (r_range[0], r_range[1], r_range[2]):
             key = coord_to_key(p_file, r)
+            #empty space
             if state.board.get(key) == None:
                 valid_move_locations.append((p_file, r))
+            #capture opponent piece
             elif state.board.get(key).owner.id != state.player.id:
                 valid_move_locations.append((p_file, r))
                 break
+            #my own piece
             elif state.board.get(key).owner.id == state.player.id:
                 break
-    #print ("valid move locations: ", end='')
-    #print (valid_move_locations)
-    #print ("rook has {} moves".format(len(valid_move_locations)))
 
     return valid_move_locations
 
 def check_diagonal(state, p_file, p_rank):
-    #print ("checking diagonal!")
-
-    dir = state.player.dir
 
     diagonals = []
     #diagnonals stored as tuples, change in: (file, rank)
     #(1,1),(1,-1),(-1,1),(-1,-1)
-
 
     if (p_file < 'h' and p_rank < 8):
         diagonals.append((1,1))
@@ -306,28 +324,23 @@ def check_diagonal(state, p_file, p_rank):
     if (p_file > 'a' and p_rank < 8):
         diagonals.append((-1,1))
 
-    #print(dir)
-    #print ("possible changes diagonally:", end="")
-    #print(diagonals)
-
     valid_move_locations = []
 
-   # print ("checking diagonals")
-    print (diagonals)
-
     for diag in diagonals:
+        #offset file and rank by the diagonal direction
         f = chr(ord(p_file) + diag[0])
         r = p_rank + diag[1]
-        #print("checking:", diag)
+        #keep the piece in the board
         while(f >= 'a' and f <= 'h' and r >= 1 and r <= 8):
-            #print ("checking: ", f, r)
             key = coord_to_key(f,r)
+            #empty space is a valid move
             if(state.board.get(key) == None):
-                #print ("bishop at",p_file, p_rank," can go to location:", key)
                 valid_move_locations.append((f,r))
+            #opponents piece is valid, but cannot go further
             elif(state.board.get(key).owner.id != state.player.id):
                 valid_move_locations.append((f,r))
                 break
+            #cannot go past my own piece
             else:
                 break
 

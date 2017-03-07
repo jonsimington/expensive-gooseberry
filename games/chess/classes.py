@@ -53,13 +53,14 @@ class player:
     _rank_direction = 0
     _name = ""
     _id = ""
+    _color = None
 
-
-    def __init__(self, check, dir, name, id):
+    def __init__(self, check, dir, name, id, color):
         self._rank_direction = dir
         self._in_check = check
         self._name = name
         self._id = id
+        self._color = color
 
     @property
     def check(self):
@@ -77,6 +78,10 @@ class player:
     def id(self):
         return self._id
 
+    @property
+    def color(self):
+        return self._color
+
 
 class state:
 
@@ -86,6 +91,9 @@ class state:
     _player = None
     _opponent = None
     _my_id = None
+    _fen = ""
+    _fen_cast = None
+    _fen_enPass = None
 
     def __init__(self, player, opp, my_id):
         self._board = {}
@@ -120,6 +128,7 @@ class state:
         self._board.clear()
         self._myPieces.clear()
         self._oppPieces.clear()
+        self._fen = None
 
     @property
     def player(self):
@@ -138,6 +147,12 @@ class state:
     @property
     def my_id(self):
         return self._my_id
+
+    def add_init_fen(self, fen):
+        self._fen = fen
+        splitFen = fen.split(" ")
+        self._fen_cast = splitFen[2]
+        self._fen_enPass = splitFen[3]
 
 class move:
     _piece = None

@@ -10,6 +10,7 @@ from games.chess.functions import result
 from games.chess.functions import in_check
 
 current_state = (None)
+fen = None
 
 class AI(BaseAI):
     """ The basic AI functions that are the same between games. """
@@ -29,16 +30,16 @@ class AI(BaseAI):
         and game. You can initialize your AI here.
         """
 
-        fen = self.game.fen.split(" ")
+        fen = self.game.fen
 
         castling = fen[2]
         enPass = fen[3]
 
         for playa in self.game.players:
             if playa.id == self.player.id:
-                me = player(playa.in_check, playa.rank_direction, playa.name, playa.id)
+                me = player(playa.in_check, playa.rank_direction, playa.name, playa.id, playa.color)
             else:
-                opp = player(playa.in_check, playa.rank_direction, playa.name, playa.id)
+                opp = player(playa.in_check, playa.rank_direction, playa.name, playa.id, playa.color)
 
         current_state = state(me, opp, self.player.id)
 
@@ -95,16 +96,17 @@ class AI(BaseAI):
 
         for playa in self.game.players:
             if playa.id == self.player.id:
-                me = player(playa.in_check, playa.rank_direction, playa.name, playa.id)
+                me = player(playa.in_check, playa.rank_direction, playa.name, playa.id, playa.color)
             else:
-                opp = player(playa.in_check, playa.rank_direction, playa.name, playa.id)
+                opp = player(playa.in_check, playa.rank_direction, playa.name, playa.id, playa.color)
 
         current_state = state(me, opp, self.player.id)
 
         #reset game board
         current_state.resetState()
 
-        #copy in board state to dictionary
+
+        #copy in board state to dictionary and pieces lists
         for p in self.game.pieces:
             new_p = piece(p.type, p.file, p.rank, p.owner, p.id, p.has_moved)
             current_state.addToBoard(new_p,new_p.key)
@@ -113,13 +115,11 @@ class AI(BaseAI):
             else:
                 current_state.addOppPiece(new_p)
 
-        #copy my own pieces to a list
-        '''for p in self.player.pieces:
-            my_p = piece(p.type, p.file, p.rank, p.owner, p.id, p.has_moved)
-            current_state.addPieces(my_p)
+        if(len(self.game.moves) <= 1):
+            #game just started, check for fen
+            if fen != None:
+                current_state.add_init_fen(fen)
 
-        #copy opponent pieces to list
-        for p in self.game.'''
 
         # 1) print the board to the console
         self.print_current_board()
@@ -138,15 +138,22 @@ class AI(BaseAI):
         # random_piece.move(random_file, random_rank)
 
         validMoves = find_actions(current_state,current_state.pieces)
-        randMove = random.choice(validMoves)
+        if(len(validMoves[0]) > 0):
+            randMove = random.choice(validMoves[0])
+            resultant_state = result(current_state, randMove)
+            if (in_check(resultant_state)):
+                print("this random move puts me in check!")
+        else:
+            randMove = None
 
-        resultant_state = result(current_state, randMove)
 
-        #if (in_check(resultant_state)):
-           # print("this random move puts me in check!")
-
-        if(len(validMoves)==0):
+        if(len(validMoves[0])==0):
             print("no valid moves to make")
+            print("non check:", validMoves[0])
+            print("everything:", end="")
+            for mov in validMoves[1]:
+                print(mov.toString())
+
 
         '''
         goFile = randMove.file

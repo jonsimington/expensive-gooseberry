@@ -5,7 +5,8 @@ from games.chess.classes import player
 from copy import deepcopy
 
 def find_actions(state, pieces):
-    #print("finding actions")
+    if(state.player.id == state.my_id):
+        print("finding actions")
     possibleMoves = []
     for x in (pieces):
         if x.type == "Pawn":
@@ -92,18 +93,41 @@ def find_actions(state, pieces):
                     possibleMoves.append(newMove)
 
         if x.type == "King":
-            for r in range(x.rank - 1, x.rank + 2, 1):
+
+            k_moves = ((1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1))
+
+            for k_mov in k_moves:
+                r = (k_mov[0])
+                f = (k_mov[1])
+                newRank = x.rank + r
+                newFile = chr(ord(x.file) + f)
+                if(newRank >= 1 and newRank <= 8 and newFile >= 'a' and newFile <= 'h'):
+                    key = coord_to_key(newFile, newRank)
+                    capPiece = state.board.get(key)
+                    if(capPiece == None or capPiece.owner.id == state.opponent.id):
+                        newMove = move(x,newFile,newRank)
+                        possibleMoves.append(newMove)
+                        #if state.player.id == state.my_id:
+                            #print("King move added:", newMove.toString())
+
+        '''for r in range(x.rank - 1, x.rank + 2, 1):
                 for f in range(ord(x.file) - 1, ord(x.file) + 2, 1):
                     # location must be on the board
                     if (r >= 1 and r <= 8 and f >= ord('a') and f <= ord('h')):
                         #not counting it's current position
-                        if(r != x.rank and chr(r) != x.file):
+                        if(r != x.rank and chr(f) != x.file):
                             key = coord_to_key(chr(f),r)
                             capPiece = state.board.get(key)
                             #King can go to empty space or capture opponent piece
-                            if(capPiece == None or capPiece.owner.id != state.player.id):
+                            if(capPiece == None or capPiece.owner.id == state.opponent.id):
                                 newMove = move(x,chr(f),r)
+                                if state.player.id == state.my_id:
+                                    print("King move added:", newMove.toString())
                                 possibleMoves.append(newMove)
+                                '''
+            #if(x.moved == False):
+                #print("castle?")
+
 
     #remove moves that put me in check by filtering
     #only do this check for me, not opponent
@@ -111,9 +135,13 @@ def find_actions(state, pieces):
     if(state.player.id == state.my_id):
         nonCheckMoves = []
         for m in possibleMoves:
+            #if m.piece.type == "King":
+                #print("checking move: ", m.toString())
             check_state = deepcopy(state)
             m_result = result(check_state,m)
             if(in_check(m_result) == False):
+                #if(m.piece.type == "King"):
+                   # print("king move won't put him in check")
                 nonCheckMoves.append(m)
             #else:
                 #print("invalid move skipped")
@@ -129,9 +157,11 @@ def find_actions(state, pieces):
             possibleMoves.remove(m)
             print("move that would result in check removed")'''
 
-
-    return nonCheckMoves
-
+    all_considered = []
+    all_considered.append(nonCheckMoves)
+    all_considered.append(possibleMoves)
+    #return nonCheckMoves
+    return all_considered
 
 
 def coord_to_key(file, rank):
@@ -246,10 +276,15 @@ def result(state, move):
 
             p.set_key()
             #if opponent piece captured, delete from board
-            if(resultant_state.board.get(p.key) != None):
+            oppPiece = resultant_state.board.get(p.key)
+            if(oppPiece != None):
                 del resultant_state.board[p.key]
+                for o in resultant_state.oppPieces:
+                    if oppPiece.id == o.id:
+                        resultant_state.oppPieces.remove(o)
             #add piece back to board in new location
                 resultant_state.addPieces(p)
+                resultant_state.addToBoard(p,p.key)
             break
 
     return resultant_state
@@ -267,10 +302,11 @@ def in_check(state):
             myKing = p
             break
 
-    state.set_player(state.opponent)
-    state.set_opponent(me)
+    check_state = deepcopy(state)
+    check_state.set_player(state.opponent)
+    check_state.set_opponent(me)
 
-    opp_actions = find_actions(state,state.oppPieces)
+    opp_actions = find_actions(check_state,check_state.oppPieces)
 
     for oppMove in opp_actions:
         if oppMove.file == myKing.file and oppMove.rank == myKing.rank:

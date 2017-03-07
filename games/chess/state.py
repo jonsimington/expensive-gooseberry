@@ -219,7 +219,10 @@ def find_actions(state):
         if x.type == "Bishop":
             #bishop can move diagonally in any direction
             diagonal_moves = check_diagonal(state, x.file, x.rank)
-
+            if diagonal_moves != None:
+                for diag_move in diagonal_moves:
+                    newMove = move(x, diag_move[0], diag_move[1])
+                    possibleMoves.append(newMove)
 
 
 
@@ -285,6 +288,50 @@ def check_crossway(state, p_file, p_rank):
     return valid_move_locations
 
 def check_diagonal(state, p_file, p_rank):
-    print ("checking diagonal!")
+    #print ("checking diagonal!")
+
+    dir = state.player.dir
+
+    diagonals = []
+    #diagnonals stored as tuples, change in: (file, rank)
+    #(1,1),(1,-1),(-1,1),(-1,-1)
 
 
+    if (p_file < 'h' and p_rank < 8):
+        diagonals.append((1,1))
+    if (p_file < 'h' and p_rank > 1):
+        diagonals.append((1,-1))
+    if (p_file > 'a' and p_rank > 1):
+        diagonals.append((-1,-1))
+    if (p_file > 'a' and p_rank < 8):
+        diagonals.append((-1,1))
+
+    #print(dir)
+    #print ("possible changes diagonally:", end="")
+    #print(diagonals)
+
+    valid_move_locations = []
+
+   # print ("checking diagonals")
+    print (diagonals)
+
+    for diag in diagonals:
+        f = chr(ord(p_file) + diag[0])
+        r = p_rank + diag[1]
+        #print("checking:", diag)
+        while(f >= 'a' and f <= 'h' and r >= 1 and r <= 8):
+            #print ("checking: ", f, r)
+            key = coord_to_key(f,r)
+            if(state.board.get(key) == None):
+                #print ("bishop at",p_file, p_rank," can go to location:", key)
+                valid_move_locations.append((f,r))
+            elif(state.board.get(key).owner.id != state.player.id):
+                valid_move_locations.append((f,r))
+                break
+            else:
+                break
+
+            f = chr(ord(f) + diag[0])
+            r += diag[1]
+
+    return valid_move_locations

@@ -2,11 +2,12 @@
 
 from joueur.base_ai import BaseAI
 import random
-from games.chess.state import state
-from games.chess.state import piece
-from games.chess.state import move
-from games.chess.state import find_actions
-from games.chess.state import player
+from games.chess.classes import state
+from games.chess.classes import piece
+from games.chess.classes import player
+from games.chess.functions import find_actions
+from games.chess.functions import result
+from games.chess.functions import in_check
 
 current_state = (None)
 
@@ -28,9 +29,24 @@ class AI(BaseAI):
         and game. You can initialize your AI here.
         """
 
-        me = player(self.player.in_check,self.player.rank_direction, self.player.name, self.player.id)
+        fen = self.game.fen.split(" ")
+
+        castling = fen[2]
+        enPass = fen[3]
+
+        for playa in self.game.players:
+            if playa.id == self.player.id:
+                me = player(playa.in_check, playa.rank_direction, playa.name, playa.id)
+            else:
+                opp = player(playa.in_check, playa.rank_direction, playa.name, playa.id)
+
+        current_state = state(me, opp, self.player.id)
+
+        print("me: ", me.id, "opp: ", opp.id)
+
+        #me = player(self.player.in_check,self.player.rank_direction, self.player.name, self.player.id)
         #init state with current player
-        current_state = state(me)
+        #current_state = state(me)
         #read in starting board of game
         #need to check for castling and en passant of FEN string
         for p in self.game.pieces:
@@ -72,10 +88,18 @@ class AI(BaseAI):
         # Here is where you'll want to code your AI.
 
 
-        me = player(self.player.in_check, self.player.rank_direction, self.player.name, self.player.id)
+        #me = player(self.player.in_check, self.player.rank_direction, self.player.name, self.player.id)
         #read in player at start of turn, check for in check
-        current_state = state(me)
+        #current_state = state(me)
         #read in game board pieces, add to state
+
+        for playa in self.game.players:
+            if playa.id == self.player.id:
+                me = player(playa.in_check, playa.rank_direction, playa.name, playa.id)
+            else:
+                opp = player(playa.in_check, playa.rank_direction, playa.name, playa.id)
+
+        current_state = state(me, opp, self.player.id)
 
         #reset game board
         current_state.resetState()
@@ -84,11 +108,18 @@ class AI(BaseAI):
         for p in self.game.pieces:
             new_p = piece(p.type, p.file, p.rank, p.owner, p.id, p.has_moved)
             current_state.addToBoard(new_p,new_p.key)
+            if (p.owner.id == self.player.id):
+                current_state.addPieces(new_p)
+            else:
+                current_state.addOppPiece(new_p)
 
         #copy my own pieces to a list
-        for p in self.player.pieces:
+        '''for p in self.player.pieces:
             my_p = piece(p.type, p.file, p.rank, p.owner, p.id, p.has_moved)
             current_state.addPieces(my_p)
+
+        #copy opponent pieces to list
+        for p in self.game.'''
 
         # 1) print the board to the console
         self.print_current_board()
@@ -106,8 +137,13 @@ class AI(BaseAI):
         # random_rank = random.randrange(8) + 1
         # random_piece.move(random_file, random_rank)
 
-        validMoves = find_actions(current_state)
+        validMoves = find_actions(current_state,current_state.pieces)
         randMove = random.choice(validMoves)
+
+        resultant_state = result(current_state, randMove)
+
+        #if (in_check(resultant_state)):
+           # print("this random move puts me in check!")
 
         if(len(validMoves)==0):
             print("no valid moves to make")

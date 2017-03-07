@@ -1,0 +1,182 @@
+class piece:
+    _type = None
+    _rank = 0
+    _file = ""
+    _key = ""
+    _owner = ""
+    _id = ""
+    _has_moved = False
+
+    def __init__(self, type, file, rank, owner, id, moved):
+        self._type = type
+        self._rank = rank    #rank is row, value is a number 1-8
+        self._file = file    #file is column, value is letter a-h
+        self._key =  str(file) + str(rank)
+        self._owner = owner
+        self._id = id
+        self._has_moved = moved
+
+    @property
+    def key(self):
+        return self._key
+
+    def set_key(self):
+        self._key = str(self._file) + str(self.rank)
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def rank(self):
+        return self._rank
+
+    @property
+    def file(self):
+        return self._file
+
+    @property
+    def moved(self):
+        return self._has_moved
+
+    @property
+    def owner(self):
+        return self._owner
+
+
+class player:
+    _in_check = False
+    _rank_direction = 0
+    _name = ""
+    _id = ""
+
+
+    def __init__(self, check, dir, name, id):
+        self._rank_direction = dir
+        self._in_check = check
+        self._name = name
+        self._id = id
+
+    @property
+    def check(self):
+        return self._in_check
+
+    @property
+    def dir(self):
+        return self._rank_direction
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def id(self):
+        return self._id
+
+
+class state:
+
+    _board = {}
+    _myPieces = []
+    _oppPieces = []
+    _player = None
+    _opponent = None
+    _my_id = None
+
+    def __init__(self, player, opp, my_id):
+        self._board = {}
+        self._myPieces = []
+        self._oppPieces = []
+        self._player = player
+        self._opponent = opp
+        self._my_id = my_id
+
+    def addToBoard(self,piece,key):
+        self._board[key] = piece
+
+    @property
+    def board(self):
+        return self._board
+
+    def addPieces(self, piece):
+        self._myPieces.append(piece)
+
+    @property
+    def pieces(self):
+        return self._myPieces
+
+    def addOppPiece(self,piece):
+        self._oppPieces.append(piece)
+
+    @property
+    def oppPieces(self):
+        return self._oppPieces
+
+    def resetState(self):
+        self._board.clear()
+        self._myPieces.clear()
+        self._oppPieces.clear()
+
+    @property
+    def player(self):
+        return self._player
+
+    @property
+    def opponent(self):
+        return self._opponent
+
+    def set_player(self, player):
+        self._player = player
+
+    def set_opponent(self, player):
+        self._opponent = player
+
+    @property
+    def my_id(self):
+        return self._my_id
+
+class move:
+    _piece = None
+    _rank = 0
+    _file = 0
+    _moveCoords = []
+    _proType = None
+
+
+    def __init__(self, piece, file, rank, proType = None):
+        self._piece = piece
+        self._rank = rank
+        self._file = file
+        self._moveCoords.clear()
+        self._moveCoords.append(rank)
+        self._moveCoords.append(file)
+        if proType != None:
+            self._proType = proType
+
+    @property
+    def coords(self):
+        return self._moveCoords
+
+    @property
+    def piece(self):
+        return self._piece
+
+    @property
+    def file(self):
+        return self._file
+
+    @property
+    def rank(self):
+        return self._rank
+
+    @property
+    def proType(self):
+        return self._proType
+
+    def toString(self):
+        moveString = self.piece.type + " to " + str(self.file) + str(self.rank)
+        return moveString

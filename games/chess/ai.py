@@ -157,6 +157,14 @@ class AI(BaseAI):
                 else:
                     x.move(randMove.file, randMove.rank)
 
+        print("Random move made:", randMove.toString())
+        print("All moves this piece could make:")
+        for m in validMoves[0]:
+            if randMove.piece.id == m.piece.id:
+                print(self.player.color, m.toString(),end='.')
+                print(" Piece id = ", m.piece.id)
+
+
         return True  # to signify we are done with our turn.
 
     def print_current_board(self):

@@ -42,6 +42,8 @@ class AI(BaseAI):
                 opp = player(playa.in_check, playa.rank_direction, playa.name, playa.id, playa.color)
 
         current_state = state(me, opp, self.player.id)
+        current_state.add_init_fen(fen)
+        print("fen cast = ", current_state.fen_cast)
 
         print("me: ", me.id, "opp: ", opp.id)
 
@@ -88,12 +90,6 @@ class AI(BaseAI):
 
         # Here is where you'll want to code your AI.
 
-
-        #me = player(self.player.in_check, self.player.rank_direction, self.player.name, self.player.id)
-        #read in player at start of turn, check for in check
-        #current_state = state(me)
-        #read in game board pieces, add to state
-
         for playa in self.game.players:
             if playa.id == self.player.id:
                 me = player(playa.in_check, playa.rank_direction, playa.name, playa.id, playa.color)
@@ -115,8 +111,10 @@ class AI(BaseAI):
             else:
                 current_state.addOppPiece(new_p)
 
+
         if(len(self.game.moves) <= 1):
             #game just started, check for fen
+            fen = self.game.fen
             if fen != None:
                 current_state.add_init_fen(fen)
 
@@ -124,19 +122,17 @@ class AI(BaseAI):
         # 1) print the board to the console
         self.print_current_board()
 
-        # 2) print the opponent's last move to the console
+        # 2) print the opponent's last move to the console AND copy to state to check en passant
         if len(self.game.moves) > 0:
+            current_state.set_last_move(self.game.moves[-1].san)
             print("Opponent's Last Move: '" + self.game.moves[-1].san + "'")
 
         # 3) print how much time remaining this AI has to calculate moves
         print("Time Remaining: " + str(self.player.time_remaining) + " ns")
 
-        # 4) make a random (and probably invalid) move.
-        #random_piece = random.choice(self.player.pieces)
-        # random_file = chr(ord("a") + random.randrange(8))
-        # random_rank = random.randrange(8) + 1
-        # random_piece.move(random_file, random_rank)
 
+
+        # 4) make a valid, random move
         validMoves = find_actions(current_state,current_state.pieces)
         if(len(validMoves[0]) > 0):
             randMove = random.choice(validMoves[0])
@@ -153,18 +149,6 @@ class AI(BaseAI):
             print("everything:", end="")
             for mov in validMoves[1]:
                 print(mov.toString())
-
-
-        '''
-        goFile = randMove.file
-        goRank = randMove.rank
-        goProT = randMove.proType
-
-        for x in (self.player.pieces):
-            if x.type == "Knight":
-                x.move(chr(ord(x.file) + 1), x.rank + self.player._rank_direction * 2)
-                break
-        '''
 
         for x in (self.player.pieces):
             if x.id == randMove.piece.id:

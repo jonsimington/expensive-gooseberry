@@ -5,8 +5,8 @@ from games.chess.classes import player
 from copy import deepcopy
 
 def find_actions(state, pieces):
-    if(state.player.id == state.my_id):
-        print("finding actions")
+   # if(state.player.id == state.my_id):
+        #print("finding actions")
     possibleMoves = []
     for x in (pieces):
         if x.type == "Pawn":
@@ -49,6 +49,26 @@ def find_actions(state, pieces):
                         for proT in promoteTypes():
                             newMove = move(x, newFile, newRank, proT)
                             possibleMoves.append(newMove)
+                #en passant from fen
+                if(state.fen_enPass != "-"):
+                    if(keyCheck == state.fen_enPass):
+                        newMove = move(x, newFile, newRank)
+                        possibleMoves.append(newMove)
+                #en passant otherwise
+                if(state.fen_enPass == '-' or state.fen_enPass == None):
+                    if x.file > 'a':
+                        lkey = coord_to_key(chr(ord(x.file) - 1), x.rank)
+                        if state.board.get(lkey) != None and state.board.get(lkey).type == "Pawn":
+                            if state.last_move == "P"+ lkey or state.last_move == "p" + lkey:
+                                newMove = move(x, newFile, newRank)
+                                possibleMoves.append(newMove)
+                    if x.file > 'h':
+                        rkey = coord_to_key(chr(ord(x.file) - 1), x.rank)
+                        if state.board.get(rkey) != None and state.board.get(rkey).type == "Pawn":
+                            if state.last_move == "P" + rkey or state.last_move == "p" + rkey:
+                                newMove = move(x, newFile, newRank)
+                                possibleMoves.append(newMove)
+
         if x.type == "Knight":
             #knight can move manhattan distance of 3, just not in a straight line
             #check all locations in a 5x5 square around knight with man_dist = 3
@@ -87,16 +107,13 @@ def find_actions(state, pieces):
             cross_moves = check_crossway(state, x.file, x.rank)
             diag_moves = check_diagonal(state, x.file, x.rank)
             queen_moves = cross_moves + diag_moves
-
             if queen_moves != None:
                 for queen_move in queen_moves:
                     newMove = move(x, queen_move[0], queen_move[1])
                     possibleMoves.append(newMove)
 
         if x.type == "King":
-
             k_moves = ((1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1))
-
             for k_mov in k_moves:
                 r = (k_mov[0])
                 f = (k_mov[1])
@@ -108,60 +125,25 @@ def find_actions(state, pieces):
                     if(capPiece == None or capPiece.owner.id == state.opponent.id):
                         newMove = move(x,newFile,newRank)
                         possibleMoves.append(newMove)
-                        #if state.player.id == state.my_id:
-                            #print("King move added:", newMove.toString())
-
-        '''for r in range(x.rank - 1, x.rank + 2, 1):
-                for f in range(ord(x.file) - 1, ord(x.file) + 2, 1):
-                    # location must be on the board
-                    if (r >= 1 and r <= 8 and f >= ord('a') and f <= ord('h')):
-                        #not counting it's current position
-                        if(r != x.rank and chr(f) != x.file):
-                            key = coord_to_key(chr(f),r)
-                            capPiece = state.board.get(key)
-                            #King can go to empty space or capture opponent piece
-                            if(capPiece == None or capPiece.owner.id == state.opponent.id):
-                                newMove = move(x,chr(f),r)
-                                if state.player.id == state.my_id:
-                                    print("King move added:", newMove.toString())
-                                possibleMoves.append(newMove)
-                                '''
-            #if(x.moved == False):
-                #print("castle?")
-
+            if(state.player.id == state.my_id):
+               possibleMoves += check_castle(state,x)
 
     #remove moves that put me in check by filtering
     #only do this check for me, not opponent
-    #print("checking invalid check moves for player = ", state.player.id)
     if(state.player.id == state.my_id):
         nonCheckMoves = []
         for m in possibleMoves:
-            #if m.piece.type == "King":
-                #print("checking move: ", m.toString())
             check_state = deepcopy(state)
             m_result = result(check_state,m)
             if(in_check(m_result) == False):
-                #if(m.piece.type == "King"):
-                   # print("king move won't put him in check")
                 nonCheckMoves.append(m)
-            #else:
-                #print("invalid move skipped")
-        #nonCheckMoves = [m for m in possibleMoves if in_check(result(state,m)) == False]
-        #print("removed invalid actions which would put me in check, this many:", len(possibleMoves) - len(nonCheckMoves))
     else:
-        #print("not me, dont care")
         return possibleMoves
-
-    '''for m in possibleMoves:
-        resultant = result(state,m)
-        if (in_check(resultant)):
-            possibleMoves.remove(m)
-            print("move that would result in check removed")'''
 
     all_considered = []
     all_considered.append(nonCheckMoves)
     all_considered.append(possibleMoves)
-    #return nonCheckMoves
+
     return all_considered
 
 
@@ -304,42 +286,97 @@ def result(state, move):
     return resultant_state
 
 
-
-def in_check(state):
-    checked = False
-
-    #print("in_check test for this state:")
-    #print_current_board(state)
-
+def in_check(state, myKing = None):
     me = state.player
-    myKing = None
 
-    for p in state.pieces:
-        if p.type == "King":
-            myKing = p
-            break
+    if myKing == None:
+        for p in state.pieces:
+            if p.type == "King":
+                myKing = p
+                break
 
     check_state = deepcopy(state)
     check_state.set_player(state.opponent)
     check_state.set_opponent(me)
 
     opp_actions = find_actions(check_state,check_state.oppPieces)
-
     for oppMove in opp_actions:
         if oppMove.file == myKing.file and oppMove.rank == myKing.rank:
-           # print("this move leaves me in check:", oppMove.toString())
-            #print()
             return True
 
     return False
 
-    #for oppMove in opp_actions:
-    #    if oppMove.file ==
 
+def check_castle(state,king):
 
-    #for playa in
+    castle_moves = []
 
-    return checked
+    k_side_cast = True
+    q_side_cast = True
+
+    #get castle info from fen
+    if (state.fen_cast != None):
+        k_side_cast = False
+        q_side_cast = False
+        if (state.player.color == "White"):
+            if "K" in state.fen_cast:
+                k_side_cast = True
+            if "Q" in state.fen_cast:
+                q_side_cast = True
+        if (state.player.color == "Black"):
+            if "k" in state.fen_cast:
+                k_side_cast = True
+            if "q" in state.fen_cast:
+                q_side_cast = True
+
+    # check board for castling
+    if (king.moved == False):
+        if (state.player.check == False):
+            # check king side
+            dirs = (1, -1)
+            for dir in dirs:
+                if(dir == 1 and k_side_cast == True) or (dir == -1 and q_side_cast == True):
+                    check_r = king.rank
+                    check_f1 = chr(ord(king.file) + 1 * dir)
+                    check_f2 = chr(ord(king.file) + 2 * dir)
+                    check_f3 = chr(ord(king.file) + 3 * dir)
+                    if (dir == -1):
+                        check_f4 = chr(ord(king.file) + 4 * dir)
+                    key1 = coord_to_key(check_f1, check_r)
+                    key2 = coord_to_key(check_f2, check_r)
+                    key3 = coord_to_key(check_f3, check_r)
+                    if (dir == -1):
+                        key4 = coord_to_key(check_f4, check_r)
+                    if (state.board.get(key1) == None):
+                        if (state.board.get(key2) == None):
+                            if (dir == 1):
+                                rook_pls = state.board.get(key3)
+                                if (rook_pls != None and rook_pls.type == "Rook" and rook_pls.moved == False):
+                                    #if spaces aren't under attack
+                                    fake_king1 = piece("King", check_f1, check_r, state.player, "99", False)
+                                    space1_bad = in_check(state, fake_king1)
+                                    fake_king2 = piece("King", check_f2, check_r, state.player, "100", False)
+                                    space2_bad = in_check(state, fake_king2)
+                                    if (space1_bad == False and space2_bad == False):
+                                        # we can castle king side
+                                        newMove = move(king, check_f2, check_r)
+                                        castle_moves.append(newMove)
+                            if (dir == -1):
+                                if (state.board.get(key3) == None):
+                                    rook_pls = state.board.get(key4)
+                                    if (rook_pls != None and rook_pls.type == "Rook" and rook_pls.moved == False):
+                                        fake_king1 = piece("King", check_f1, check_r, state.player, "99", False)
+                                        space1_bad = in_check(state, fake_king1)
+                                        fake_king2 = piece("King", check_f2, check_r, state.player, "100", False)
+                                        space2_bad = in_check(state, fake_king2)
+                                        fake_king3 = piece("King", check_f3, check_r, state.player, "101", False)
+                                        space3_bad = in_check(state, fake_king3)
+                                        if(space1_bad == False and space2_bad == False and space3_bad == False):
+                                            # we can castle queen side
+                                            newMove = move(king, check_f2, check_r)
+                                            castle_moves.append(newMove)
+    return castle_moves
+
 
 
 def print_current_board(state):

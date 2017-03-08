@@ -6,6 +6,7 @@ class piece:
     _owner = ""
     _id = ""
     _has_moved = False
+    _allow_enPass = False
 
     def __init__(self, type, file, rank, owner, id, moved):
         self._type = type
@@ -50,6 +51,13 @@ class piece:
     def toString(self):
         pieceString = self._owner.color + self._type + "@" + self._file + str(self._rank)
         return pieceString
+
+    @property
+    def enPass(self):
+        return self._allow_enPass
+
+    def set_enPass(self, bool):
+        self._allow_enPass = bool
 
 class player:
     _in_check = False
@@ -97,6 +105,7 @@ class state:
     _fen = ""
     _fen_cast = None
     _fen_enPass = None
+    _last_move = None
 
     def __init__(self, player, opp, my_id):
         self._board = {}
@@ -156,6 +165,21 @@ class state:
         splitFen = fen.split(" ")
         self._fen_cast = splitFen[2]
         self._fen_enPass = splitFen[3]
+
+    @property
+    def fen_cast(self):
+        return self._fen_cast
+
+    @property
+    def fen_enPass(self):
+        return self._fen_enPass
+
+    def set_last_move(self,last_move):
+        self._last_move = last_move
+
+    @property
+    def last_move(self):
+        return self._last_move
 
 class move:
     _piece = None

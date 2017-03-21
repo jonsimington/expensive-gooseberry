@@ -2,6 +2,7 @@
 
 from joueur.base_ai import BaseAI
 import random
+from operator import attrgetter
 from games.chess.classes import state
 from games.chess.classes import piece
 from games.chess.classes import player
@@ -9,6 +10,7 @@ from games.chess.functions import find_actions
 from games.chess.functions import result
 from games.chess.functions import in_check
 from games.chess.functions import check_mate
+from copy import deepcopy
 
 
 current_state = (None)
@@ -135,7 +137,7 @@ class AI(BaseAI):
 
 
         # 4) make a valid, random move
-        validMoves = find_actions(current_state,current_state.pieces)
+        '''validMoves = find_actions(current_state,current_state.pieces)
         randMove = None
         if(len(validMoves[0]) > 0):
             for mov in validMoves[0]:
@@ -154,7 +156,9 @@ class AI(BaseAI):
             print("non check:", validMoves[0])
             print("everything:", end="")
             for mov in validMoves[1]:
-                print(mov.toString())
+                print(mov.toString())'''
+
+        randMove = self.DLM(current_state, 0)
 
         print("Random move made:", randMove.toString())
 
@@ -174,6 +178,74 @@ class AI(BaseAI):
 
 
         return True  # to signify we are done with our turn.
+
+
+    def DLM(self, state, limit):
+        actions = find_actions(state, state.pieces)
+        frontier = []
+        for action in actions[0]:
+            child = result(state, action)
+            if check_mate(child) == True:
+                return child.last_move
+            child.calc_state_eval()
+            frontier.append(child)
+        if (limit > 1):
+            for child in frontier:
+                child.set_state_eval(self.MinV(child, limit - 1))
+        best_state = max(frontier, key=attrgetter('state_eval'))
+        return best_state.last_move
+
+    def MaxV(self, state, limit):
+        actions = find_actions(state, state.pieces)
+        results = []
+        for action in actions[0]:
+            child = result(state, action)
+            child.calc_state_eval()
+            results.append(child)
+        min_state = max(results, key = attrgetter('state_eval'))
+        return min_state
+
+    def MinV(self, parent, limit):
+        for playa in self.game.players:
+            if playa.id == self.player.id:
+                me = player(playa.in_check, playa.rank_direction, playa.name, playa.id, playa.color)
+            else:
+                opp = player(playa.in_check, playa.rank_direction, playa.name, playa.id, playa.color)
+
+        min_state = state(opp, me, self.player.id)
+
+        #print("state made:")
+        #print("player id =", min_state.player.id)
+
+        #min_state = state(parent.opponent, parent.player, parent.my_id)
+        for p in parent.pieces:
+            min_state.addOppPiece(p)
+            min_state.addToBoard(p, p.key)
+        for op in parent.oppPieces:
+            min_state.addPieces(op)
+            min_state.addToBoard(op, op.key)
+
+        '''min_state = deepcopy(state)
+        me = min_state.player
+        min_state.set_player(min_state.opponent)
+        min_state.set_opponent(me)
+        myPieces = min_state.pieces
+        oppPieces = min_state.oppPieces
+        board = min_state.board
+        min_state.resetState()
+        min_state.set_board(board)
+        min_state.set_pieces(myPieces)
+        min_state.set_opp_pieces(oppPieces)'''
+
+        actions = find_actions(min_state, min_state.pieces)
+        results = []
+        for action in actions[0]:
+            child = result(min_state, action)
+            child.calc_state_eval()
+            results.append(child)
+        min_state = min(results, key = attrgetter('state_eval'))
+        return min_state.state_eval
+
 
     def print_current_board(self):
         """Prints the current board using pretty ASCII art

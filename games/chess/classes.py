@@ -107,6 +107,8 @@ class state:
     _fen_enPass = None
     _last_move = None
     _player_in_check = False
+    _state_eval = 0
+
 
     def __init__(self, player, opp, my_id):
         self._board = {}
@@ -119,6 +121,9 @@ class state:
     def addToBoard(self,piece,key):
         self._board[key] = piece
 
+    def set_board(self,board):
+        self._board = board
+
     @property
     def board(self):
         return self._board
@@ -130,12 +135,18 @@ class state:
     def pieces(self):
         return self._myPieces
 
+    def set_pieces(self, pieces):
+        self._myPieces = pieces
+
     def addOppPiece(self,piece):
         self._oppPieces.append(piece)
 
     @property
     def oppPieces(self):
         return self._oppPieces
+
+    def set_opp_pieces(self, oppPieces):
+        self._oppPieces = oppPieces
 
     def resetState(self):
         self._board.clear()
@@ -188,6 +199,32 @@ class state:
     @property
     def player_in_check(self):
         return self._player_in_check
+
+    def calc_state_eval(self):
+        calc = 0
+        for p in self._myPieces:
+            calc += piece_val(p)
+        for op in self._oppPieces:
+            calc -= piece_val(op)
+        self._state_eval = calc
+
+    @property
+    def state_eval(self):
+        return self._state_eval
+
+    def set_state_eval(self, val):
+        self._state_eval = val
+
+def piece_val(piece):
+    if piece.type == "Pawn":
+        return 1
+    if piece.type == "Bishop" or piece.type == "Knight":
+        return 3
+    if piece.type == "Rook":
+        return 5
+    if piece.type == "Queen":
+        return 9
+    return 0
 
 class move:
     _piece = None

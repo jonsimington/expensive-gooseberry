@@ -291,6 +291,8 @@ def result(state, move):
         resultant_state.set_player_check(True)
     else:
         resultant_state.set_player_check(False)
+
+    resultant_state.set_last_move(move)
     #print("resultant state for move", move.toString(), ":")
     #print_current_board(resultant_state)
     return resultant_state

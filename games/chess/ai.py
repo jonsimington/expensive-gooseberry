@@ -8,6 +8,8 @@ from games.chess.classes import player
 from games.chess.functions import find_actions
 from games.chess.functions import result
 from games.chess.functions import in_check
+from games.chess.functions import check_mate
+
 
 current_state = (None)
 fen = None
@@ -134,13 +136,17 @@ class AI(BaseAI):
 
         # 4) make a valid, random move
         validMoves = find_actions(current_state,current_state.pieces)
+        randMove = None
         if(len(validMoves[0]) > 0):
-            randMove = random.choice(validMoves[0])
-            resultant_state = result(current_state, randMove)
-            if (in_check(resultant_state)):
-                print("this random move puts me in check!")
-        else:
-            randMove = None
+            for mov in validMoves[0]:
+                if check_mate(result(current_state,mov)) == True:
+                    randMove = mov
+                    break
+            if randMove == None:
+                randMove = random.choice(validMoves[0])
+                resultant_state = result(current_state, randMove)
+                if (in_check(resultant_state)):
+                    print("this random move puts me in check!")
 
 
         if(len(validMoves[0])==0):
@@ -150,6 +156,8 @@ class AI(BaseAI):
             for mov in validMoves[1]:
                 print(mov.toString())
 
+        print("Random move made:", randMove.toString())
+
         for x in (self.player.pieces):
             if x.id == randMove.piece.id:
                 if(randMove.proType != None):
@@ -157,12 +165,12 @@ class AI(BaseAI):
                 else:
                     x.move(randMove.file, randMove.rank)
 
-        print("Random move made:", randMove.toString())
-        print("All moves this piece could make:")
-        for m in validMoves[0]:
-            if randMove.piece.id == m.piece.id:
-                print(self.player.color, m.toString(),end='.')
-                print(" Piece id = ", m.piece.id)
+
+        #print("All moves this piece could make:")
+        #for m in validMoves[0]:
+            #if randMove.piece.id == m.piece.id:
+                #print(self.player.color, m.toString(),end='.')
+                #print(" Piece id = ", m.piece.id)
 
 
         return True  # to signify we are done with our turn.

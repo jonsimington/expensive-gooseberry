@@ -39,8 +39,7 @@ def find_actions(state, pieces):
                 keyCheck = coord_to_key(newFile, newRank)
                 capPiece = state.board.get(keyCheck)
                 #capture the piece if it's there
-                #add piece to list if looking for opponent's moves
-                if((state.player.id != state.my_id) or (capPiece != None and capPiece.owner.id != state.player.id)):
+                if(capPiece != None and capPiece.owner.id != state.player.id):
                     if (newRank > 1 and newRank < 8):
                         newMove = move(x, newFile, newRank)
                         possibleMoves.append(newMove)
@@ -130,15 +129,15 @@ def find_actions(state, pieces):
 
     #remove moves that put me in check by filtering
     #only do this check for me, not opponent
-    if(state.player.id == state.my_id):
-        nonCheckMoves = []
-        for m in possibleMoves:
-            check_state = deepcopy(state)
-            m_result = result(check_state,m)
-            if(in_check(m_result) == False):
-                nonCheckMoves.append(m)
-    else:
-        return possibleMoves
+    #if(state.player.id == state.my_id):
+    nonCheckMoves = []
+    for m in possibleMoves:
+        #check_state = deepcopy(state)
+        m_result = result(state,m)
+        if(m_result.player_in_check == False):
+            nonCheckMoves.append(m)
+    #else:
+        #return possibleMoves
 
     all_considered = []
     all_considered.append(nonCheckMoves)
@@ -258,8 +257,16 @@ def check_diagonal(state, p_file, p_rank):
 def result(state, move):
     #print("result of move: ", move.toString())
     resultant_state = deepcopy(state)
-    for p in resultant_state.pieces:
+    if resultant_state.player.id == resultant_state.my_id:
+        mover_pieces = resultant_state.pieces
+        waiter_pieces = resultant_state.oppPieces
+    else:
+        mover_pieces = resultant_state.oppPieces
+        waiter_pieces = resultant_state.pieces
+    for p in mover_pieces:
         if move.piece.id == p.id:
+            #print ("mover piece is ", p.toString())
+            #delete piece from old position on board before move
             del resultant_state.board[p.key]
             #print("delete", p.toString(), "from board")
             p._rank = move.rank
@@ -273,39 +280,127 @@ def result(state, move):
             oppPiece = resultant_state.board.get(p.key)
             if(oppPiece != None):
                 del resultant_state.board[p.key]
-                for o in resultant_state.oppPieces:
+                for o in waiter_pieces:
                     if oppPiece.id == o.id:
-                        resultant_state.oppPieces.remove(o)
-            #add piece back to board in new location
-            #resultant_state.addPieces(p)
+                        waiter_pieces.remove(o)
+            #add moved piece back to board in new location
             resultant_state.addToBoard(p,p.key)
             break
 
+    if in_check(resultant_state) == True:
+        resultant_state.set_player_check(True)
+    else:
+        resultant_state.set_player_check(False)
     #print("resultant state for move", move.toString(), ":")
     #print_current_board(resultant_state)
     return resultant_state
 
 
 def in_check(state, myKing = None):
-    me = state.player
+    if state.player.id == state.my_id:
+        pieces = state.pieces
+    else:
+        pieces = state.oppPieces
 
-    if myKing == None:
-        for p in state.pieces:
+    if myKing ==  None:
+        for p in pieces:
             if p.type == "King":
                 myKing = p
                 break
 
-    check_state = deepcopy(state)
-    check_state.set_player(state.opponent)
-    check_state.set_opponent(me)
+    #check for knights
+    for r in range(myKing.rank - 2, myKing.rank + 3, 1):
+        for f in range(ord(myKing.file) - 2, ord(myKing.file) + 3, 1):
+            # location must be on the board
+            if (r >= 1 and r <= 8 and f >= ord('a') and f <= ord('h')):
+                # location must be man_dist of 3 away
+                if (man_dist(ord(myKing.file), myKing.rank, f, r) == 3):
+                    keyCheck = coord_to_key(chr(f), r)
+                    oppKnight = state.board.get(keyCheck)
+                    if (oppKnight != None and oppKnight.owner.id != myKing.owner.id):
+                        if oppKnight.type == "Knight":
+                            return True
 
-    opp_actions = find_actions(check_state,check_state.oppPieces)
-    for oppMove in opp_actions:
-        if oppMove.file == myKing.file and oppMove.rank == myKing.rank:
-            return True
+    #radiate out from king and look for attacking piece
+    #4 crossway and 4 diagonal directions to check for pieces
+    #if i find a piece with same owner as "my king", stop because it's safe
+    #if i find an opponent piece, check what it is depending the direction going
+    #make sure to multiply all rank values by state.player.rank_direction (state.player.dir)
+    #direcitons are stored as (file, rank)
+    myR = state.player.dir
+    crossways = ((1, 0), (0, myR), (0, -1 * myR), (-1, 0))
+    diagonals = ((1, myR), (1, -1 * myR), (-1, myR), (-1, -1 * myR))
+
+    for dir in crossways:
+        f_check = chr(ord(myKing.file) + dir[0])
+        r_check = myKing.rank + dir[1]
+        while(r_check >= 1 and r_check <= 8 and f_check >= 'a' and f_check <= 'h'):
+            key = coord_to_key(f_check, r_check)
+            p_check = state.board.get(key)
+            if p_check != None:
+                if p_check.owner.id != myKing.owner.id:
+                    #opponent piece!
+                    if r_check == myKing.rank + dir[1] and f_check == chr(ord(myKing.file) + dir[0]):
+                        if p_check.type == "King":
+                            return True
+                    if p_check.type == "Rook" or p_check.type == "Queen":
+                        return True
+                    else:
+                        #not a dangerous piece
+                        break
+                else:
+                    #king's piece
+                    break
+
+            f_check = chr(ord(f_check) + dir[0])
+            r_check = r_check + dir[1]
+
+    for dir in diagonals:
+        f_check = chr(ord(myKing.file) + dir[0])
+        r_check = myKing.rank + dir[1]
+        while (r_check >= 1 and r_check <= 8 and f_check >= 'a' and f_check <= 'h'):
+            key = coord_to_key(f_check, r_check)
+            p_check = state.board.get(key)
+            if p_check != None:
+                if p_check.owner.id != myKing.owner.id:
+                    # opponent piece!
+                    if r_check == myKing.rank + dir[1] and f_check == chr(ord(myKing.file) + dir[0]):
+                        if p_check.type == "King":
+                            return True
+                    if dir[1] == myR and r_check == myKing.rank + dir[1]:
+                        #my direction, look for pawns
+                        #only if it's one in front though
+                        if p_check.type == "Pawn":
+                            return True
+                    if p_check.type == "Bishop" or p_check.type == "Queen":
+                        return True
+                    else:
+                        # not a dangerous piece
+                        break
+                else:
+                    #king's piece
+                    break
+
+            f_check = chr(ord(f_check) + dir[0])
+            r_check = r_check + dir[1]
 
     return False
 
+def check_mate(state):
+    mate_state = deepcopy(state)
+    me = mate_state.player
+    mate_state.set_player(mate_state.opponent)
+    mate_state.set_opponent(me)
+
+    opp_actions = find_actions(mate_state, mate_state.oppPieces)
+    #print ("check mate test")
+    #print ("# valid responses by opp:", len(opp_actions[0]))
+    #for opm in opp_actions[0]:
+        #print(opm.toString())
+    if len(opp_actions[0]) == 0:
+        return True
+
+    return False
 
 def check_castle(state,king):
 

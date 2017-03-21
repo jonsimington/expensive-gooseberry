@@ -106,6 +106,7 @@ class state:
     _fen_cast = None
     _fen_enPass = None
     _last_move = None
+    _player_in_check = False
 
     def __init__(self, player, opp, my_id):
         self._board = {}
@@ -180,6 +181,13 @@ class state:
     @property
     def last_move(self):
         return self._last_move
+
+    def set_player_check(self,check):
+        self._player_in_check = check
+
+    @property
+    def player_in_check(self):
+        return self._player_in_check
 
 class move:
     _piece = None

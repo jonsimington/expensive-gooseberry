@@ -131,7 +131,7 @@ def find_actions(state, pieces):
     nonCheckMoves = []
     for m in possibleMoves:
         m_result = result(state,m)
-        if(m_result.player_in_check == False):
+        if(m_result != None and m_result.player_in_check == False):
             nonCheckMoves.append(m)
 
     all_considered = []
@@ -274,6 +274,10 @@ def result(state, move):
             #if opponent piece captured, delete from board
             oppPiece = resultant_state.board.get(p.key)
             if(oppPiece != None):
+                if oppPiece.type == "King":
+                    print("About to delete king! :( Very bad!")
+                    print("this move del king:", move.toString())
+                    return None
                 del resultant_state.board[p.key]
                 for o in waiter_pieces:
                     if oppPiece.id == o.id:
@@ -281,6 +285,15 @@ def result(state, move):
             #add moved piece back to board in new location
             resultant_state.addToBoard(p,p.key)
             break
+
+    theresking = False
+    for pi in resultant_state.pieces:
+        if pi.type == "King":
+            theresking = True
+            break
+    if theresking == False:
+        print ("player has no king!")
+        print_current_board(resultant_state)
 
     if in_check(resultant_state) == True:
         resultant_state.set_player_check(True)
@@ -311,6 +324,8 @@ def in_check(state, myKing = None):
         print ("their pieces:")
         for p in pieces:
             print (p.toString())
+        print_current_board(state)
+        print("...")
 
     #check for knights
     for r in range(myKing.rank - 2, myKing.rank + 3, 1):

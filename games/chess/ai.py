@@ -129,8 +129,6 @@ class AI(BaseAI):
         # 3) print how much time remaining this AI has to calculate moves
         print("Time Remaining: " + str(self.player.time_remaining) + " ns")
 
-
-
         # 4) find best move w/ DLM
         limit = 0
         if len(self.game.pieces) <= 8:
@@ -142,7 +140,7 @@ class AI(BaseAI):
         else:
             limit = 2
 
-        next_move = self.DLM(current_state, limit)
+        next_move = self.DLM(current_state, 2)
 
         print("move made:", next_move.toString(), " limit was: ", str(limit))
 
@@ -184,7 +182,7 @@ class AI(BaseAI):
         max_state = copy_state(parent, False)
         if self.terminal_test(max_state) == False:
             actions = find_actions(max_state, max_state.pieces)
-            if len(actions) == 0:
+            if len(actions[0]) == 0:
                 return self.calc_state_eval(parent)
             frontier = []
             for action in actions[0]:
@@ -205,7 +203,7 @@ class AI(BaseAI):
         min_state = copy_state(parent, True)
         if self.terminal_test(min_state) == False:
             actions = find_actions(min_state, min_state.pieces)
-            if len(actions) == 0:
+            if len(actions[0]) == 0:
                 return self.calc_state_eval(parent)
             frontier = []
             for action in actions[0]:

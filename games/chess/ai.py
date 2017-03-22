@@ -142,7 +142,7 @@ class AI(BaseAI):
 
         next_move = self.DLM(current_state, 2)
 
-        print("move made:", next_move.toString(), " limit was: ", str(limit))
+        print("move made:", next_move.toString(), " limit was: ", 2)
 
         for x in (self.player.pieces):
             if x.id == next_move.piece.id:
@@ -179,7 +179,7 @@ class AI(BaseAI):
 
 
     def MaxV(self, parent, limit):
-        max_state = copy_state(parent, False)
+        max_state = copy_state(parent, True)
         if self.terminal_test(max_state) == False:
             actions = find_actions(max_state, max_state.pieces)
             if len(actions[0]) == 0:

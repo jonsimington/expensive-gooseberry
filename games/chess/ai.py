@@ -132,9 +132,19 @@ class AI(BaseAI):
 
 
         # 4) find best move w/ DLM
-        next_move = self.DLM(current_state, 2)
+        limit = 0
+        if len(self.game.pieces) <= 8:
+            limit = 4
+        elif len(self.game.pieces) <= 16:
+            limit = 3
+        elif len(self.game.pieces) <= 24:
+            limit = 2
+        else:
+            limit = 2
 
-        print("move made:", next_move.toString())
+        next_move = self.DLM(current_state, limit)
+
+        print("move made:", next_move.toString(), " limit was: ", str(limit))
 
         for x in (self.player.pieces):
             if x.id == next_move.piece.id:
@@ -174,6 +184,8 @@ class AI(BaseAI):
         max_state = copy_state(parent, False)
         if self.terminal_test(max_state) == False:
             actions = find_actions(max_state, max_state.pieces)
+            if len(actions) == 0:
+                return self.calc_state_eval(parent)
             frontier = []
             for action in actions[0]:
                 child = result(max_state, action)
@@ -193,6 +205,8 @@ class AI(BaseAI):
         min_state = copy_state(parent, True)
         if self.terminal_test(min_state) == False:
             actions = find_actions(min_state, min_state.pieces)
+            if len(actions) == 0:
+                return self.calc_state_eval(parent)
             frontier = []
             for action in actions[0]:
                 child = result(min_state, action)
@@ -221,11 +235,11 @@ class AI(BaseAI):
         return calc
 
     def terminal_test(self, term_state):
-        mate = check_mate(term_state)
+        '''mate = check_mate(term_state)
         if term_state.player.check == True and mate == True:
             return "Mate"
         if term_state.player.check == False and mate == True:
-            return "Stalemate"
+            return "Stalemate"'''
         all_pieces = term_state.pieces + term_state.oppPieces
         if len(all_pieces) <= 3:
             for p in all_pieces:

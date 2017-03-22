@@ -10,6 +10,7 @@ from games.chess.functions import find_actions
 from games.chess.functions import result
 from games.chess.functions import in_check
 from games.chess.functions import check_mate
+from games.chess.functions import copy_state
 from copy import deepcopy
 
 
@@ -49,20 +50,14 @@ class AI(BaseAI):
         current_state.add_init_fen(fen)
         print("fen cast = ", current_state.fen_cast)
 
-        print("me: ", me.id, "opp: ", opp.id)
+        print("me: ", me.color, me.id, "opp: ", opp.color, opp.id)
 
-        #me = player(self.player.in_check,self.player.rank_direction, self.player.name, self.player.id)
         #init state with current player
-        #current_state = state(me)
         #read in starting board of game
         #need to check for castling and en passant of FEN string
         for p in self.game.pieces:
             new_p = piece(p.type, p.file, p.rank, p.owner, p.id, p.has_moved)
             current_state.addToBoard(new_p,new_p.key)
-
-        #print(current_state.getPieces().get("a1").getType())
-
-        # replace with your start logic
 
     def game_updated(self):
         """ This is called every time the game's state updates, so if you are
@@ -136,49 +131,25 @@ class AI(BaseAI):
 
 
 
-        # 4) make a valid, random move
-        '''validMoves = find_actions(current_state,current_state.pieces)
-        randMove = None
-        if(len(validMoves[0]) > 0):
-            for mov in validMoves[0]:
-                if check_mate(result(current_state,mov)) == True:
-                    randMove = mov
-                    break
-            if randMove == None:
-                randMove = random.choice(validMoves[0])
-                resultant_state = result(current_state, randMove)
-                if (in_check(resultant_state)):
-                    print("this random move puts me in check!")
+        # 4) find best move w/ DLM
+        next_move = self.DLM(current_state, 2)
 
-
-        if(len(validMoves[0])==0):
-            print("no valid moves to make")
-            print("non check:", validMoves[0])
-            print("everything:", end="")
-            for mov in validMoves[1]:
-                print(mov.toString())'''
-
-        randMove = self.DLM(current_state, 0)
-
-        print("Random move made:", randMove.toString())
+        print("move made:", next_move.toString())
 
         for x in (self.player.pieces):
-            if x.id == randMove.piece.id:
-                if(randMove.proType != None):
-                    x.move(randMove.file, randMove.rank, randMove.proType)
+            if x.id == next_move.piece.id:
+                if(next_move.proType != None):
+                    x.move(next_move.file, next_move.rank, next_move.proType)
                 else:
-                    x.move(randMove.file, randMove.rank)
-
-
-        #print("All moves this piece could make:")
-        #for m in validMoves[0]:
-            #if randMove.piece.id == m.piece.id:
-                #print(self.player.color, m.toString(),end='.')
-                #print(" Piece id = ", m.piece.id)
-
+                    x.move(next_move.file, next_move.rank)
 
         return True  # to signify we are done with our turn.
 
+
+    def IDM(self, state, max_limit):
+        for i in range (max_limit + 1):
+            best_act = self.DLM(state, i)
+        return best_act
 
     def DLM(self, state, limit):
         actions = find_actions(state, state.pieces)
@@ -187,65 +158,81 @@ class AI(BaseAI):
             child = result(state, action)
             if check_mate(child) == True:
                 return child.last_move
-            child.calc_state_eval()
+            child.set_state_eval(self.calc_state_eval(child))
             frontier.append(child)
-        if (limit > 1):
+        if (limit > 0):
             for child in frontier:
                 child.set_state_eval(self.MinV(child, limit - 1))
+        random.shuffle(frontier)
         best_state = max(frontier, key=attrgetter('state_eval'))
+        print("best action chose eval = ", best_state.state_eval)
         return best_state.last_move
 
-    def MaxV(self, state, limit):
-        actions = find_actions(state, state.pieces)
-        results = []
-        for action in actions[0]:
-            child = result(state, action)
-            child.calc_state_eval()
-            results.append(child)
-        min_state = max(results, key = attrgetter('state_eval'))
-        return min_state
+
+
+    def MaxV(self, parent, limit):
+        max_state = copy_state(parent, False)
+        if self.terminal_test(max_state) == False:
+            actions = find_actions(max_state, max_state.pieces)
+            frontier = []
+            for action in actions[0]:
+                child = result(max_state, action)
+                child.set_state_eval(self.calc_state_eval(child))
+                frontier.append(child)
+            if (limit > 0):
+                for child in frontier:
+                    child.set_state_eval(self.MinV(child, limit - 1))
+            random.shuffle(frontier)
+            max_state = max(frontier, key = attrgetter('state_eval'))
+        else:
+            max_state.set_state_eval(self.calc_state_eval(parent))
+        return max_state.state_eval
+
 
     def MinV(self, parent, limit):
-        for playa in self.game.players:
-            if playa.id == self.player.id:
-                me = player(playa.in_check, playa.rank_direction, playa.name, playa.id, playa.color)
-            else:
-                opp = player(playa.in_check, playa.rank_direction, playa.name, playa.id, playa.color)
-
-        min_state = state(opp, me, self.player.id)
-
-        #print("state made:")
-        #print("player id =", min_state.player.id)
-
-        #min_state = state(parent.opponent, parent.player, parent.my_id)
-        for p in parent.pieces:
-            min_state.addOppPiece(p)
-            min_state.addToBoard(p, p.key)
-        for op in parent.oppPieces:
-            min_state.addPieces(op)
-            min_state.addToBoard(op, op.key)
-
-        '''min_state = deepcopy(state)
-        me = min_state.player
-        min_state.set_player(min_state.opponent)
-        min_state.set_opponent(me)
-        myPieces = min_state.pieces
-        oppPieces = min_state.oppPieces
-        board = min_state.board
-        min_state.resetState()
-        min_state.set_board(board)
-        min_state.set_pieces(myPieces)
-        min_state.set_opp_pieces(oppPieces)'''
-
-        actions = find_actions(min_state, min_state.pieces)
-        results = []
-        for action in actions[0]:
-            child = result(min_state, action)
-            child.calc_state_eval()
-            results.append(child)
-        min_state = min(results, key = attrgetter('state_eval'))
+        min_state = copy_state(parent, True)
+        if self.terminal_test(min_state) == False:
+            actions = find_actions(min_state, min_state.pieces)
+            frontier = []
+            for action in actions[0]:
+                child = result(min_state, action)
+                child.set_state_eval(self.calc_state_eval(child))
+                frontier.append(child)
+            if (limit > 0):
+                for child in frontier:
+                    child.set_state_eval(self.MaxV(child, limit - 1))
+            random.shuffle(frontier)
+            min_state = min(frontier, key = attrgetter('state_eval'))
+            #print("min state chose eval = ", min_state.state_eval)
+        else:
+            min_state.set_state_eval(self.calc_state_eval(parent))
         return min_state.state_eval
 
+
+    def calc_state_eval(self, eval_state):
+        calc = 0
+        all_pieces = eval_state.pieces + eval_state.oppPieces
+        for p in all_pieces:
+            if p.owner.id == self.player.id:
+                calc += piece_val(p)
+            else:
+                calc -= piece_val(p)
+
+        return calc
+
+    def terminal_test(self, term_state):
+        mate = check_mate(term_state)
+        if term_state.player.check == True and mate == True:
+            return "Mate"
+        if term_state.player.check == False and mate == True:
+            return "Stalemate"
+        all_pieces = term_state.pieces + term_state.oppPieces
+        if len(all_pieces) <= 3:
+            for p in all_pieces:
+                if p.type != "King" or p.type != "Bishop" or p.type != "Knight":
+                    return False
+            return "Draw"
+        return False
 
     def print_current_board(self):
         """Prints the current board using pretty ASCII art
@@ -293,3 +280,14 @@ class AI(BaseAI):
 
                 output += "|"
             print(output)
+
+def piece_val(piece):
+    if piece.type == "Pawn":
+        return 1
+    if piece.type == "Bishop" or piece.type == "Knight":
+        return 3
+    if piece.type == "Rook":
+        return 5
+    if piece.type == "Queen":
+        return 9
+    return 0

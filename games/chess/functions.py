@@ -127,17 +127,12 @@ def find_actions(state, pieces):
             if(state.player.id == state.my_id):
                possibleMoves += check_castle(state,x)
 
-    #remove moves that put me in check by filtering
-    #only do this check for me, not opponent
-    #if(state.player.id == state.my_id):
+    #remove moves that put me in check
     nonCheckMoves = []
     for m in possibleMoves:
-        #check_state = deepcopy(state)
         m_result = result(state,m)
         if(m_result.player_in_check == False):
             nonCheckMoves.append(m)
-    #else:
-        #return possibleMoves
 
     all_considered = []
     all_considered.append(nonCheckMoves)
@@ -256,7 +251,7 @@ def check_diagonal(state, p_file, p_rank):
 
 def result(state, move):
     #print("result of move: ", move.toString())
-    resultant_state = deepcopy(state)
+    resultant_state = copy_state(state, False)
     if resultant_state.player.id == resultant_state.my_id:
         mover_pieces = resultant_state.pieces
         waiter_pieces = resultant_state.oppPieces
@@ -309,6 +304,13 @@ def in_check(state, myKing = None):
             if p.type == "King":
                 myKing = p
                 break
+
+    if myKing == None:
+        print ("king still is None")
+        print (state.player.toString())
+        print ("their pieces:")
+        for p in pieces:
+            print (p.toString())
 
     #check for knights
     for r in range(myKing.rank - 2, myKing.rank + 3, 1):
@@ -389,19 +391,10 @@ def in_check(state, myKing = None):
     return False
 
 def check_mate(state):
-    mate_state = deepcopy(state)
-    me = mate_state.player
-    mate_state.set_player(mate_state.opponent)
-    mate_state.set_opponent(me)
-
-    opp_actions = find_actions(mate_state, mate_state.oppPieces)
-    #print ("check mate test")
-    #print ("# valid responses by opp:", len(opp_actions[0]))
-    #for opm in opp_actions[0]:
-        #print(opm.toString())
+    mate_state = copy_state(state, True)
+    opp_actions = find_actions(mate_state, mate_state.pieces)
     if len(opp_actions[0]) == 0:
         return True
-
     return False
 
 def check_castle(state,king):
@@ -524,3 +517,36 @@ def print_current_board(state):
 
             output += "|"
         print(output)
+
+
+def copy_state(old_state, swap_players):
+    old_playa = old_state.player
+    copy_playa = player(old_playa.check, old_playa.dir, old_playa.name, old_playa.id, old_playa.color)
+    old_opp = old_state.opponent
+    copy_opp = player(old_opp.check, old_opp.dir, old_opp.name, old_opp.id, old_opp.color)
+
+    if swap_players == True:
+        new_playa = copy_opp
+        new_opp = copy_playa
+        new_state = state(copy_opp, copy_playa, copy_opp.id)
+        pieces = old_state.oppPieces
+        oppPieces = old_state.pieces
+    elif swap_players == False:
+        new_playa = copy_playa
+        new_opp = copy_opp
+        new_state = state(copy_playa, copy_opp, copy_playa.id)
+        pieces = old_state.pieces
+        oppPieces = old_state.oppPieces
+    else:
+        print ("Error! copy_state function passed with undefined swap_player arg!")
+
+    for p in pieces:
+        new_p = piece(p.type, p.file, p.rank, new_playa, p.id, p.moved)
+        new_state.addPieces(new_p)
+        new_state.addToBoard(new_p, new_p.key)
+    for op in oppPieces:
+        new_op = piece(op.type, op.file, op.rank, new_opp, op.id, op.moved)
+        new_state.addOppPiece(new_op)
+        new_state.addToBoard(new_op, new_op.key)
+
+    return new_state

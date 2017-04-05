@@ -49,7 +49,7 @@ class piece:
         return self._owner
 
     def toString(self):
-        pieceString = self._owner.color + self._type + "@" + self._file + str(self._rank)
+        pieceString = self.owner.color + self._type + "@" + self._file + str(self._rank)
         return pieceString
 
     @property
@@ -241,5 +241,5 @@ class move:
         return self._proType
 
     def toString(self):
-        moveString = self.piece.type + " to " + str(self.file) + str(self.rank)
+        moveString = self.piece.toString() + " to " + str(self.file) + str(self.rank)
         return moveString

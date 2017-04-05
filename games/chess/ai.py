@@ -11,7 +11,7 @@ from games.chess.functions import result
 from games.chess.functions import in_check
 from games.chess.functions import check_mate
 from games.chess.functions import copy_state
-from copy import deepcopy
+import time
 
 
 current_state = (None)
@@ -50,7 +50,7 @@ class AI(BaseAI):
         current_state.add_init_fen(fen)
         print("fen cast = ", current_state.fen_cast)
 
-        print("me: ", me.color, me.id, "opp: ", opp.color, opp.id)
+        print("me: ", me.toString(), "opp: ", opp.toString())
 
         #init state with current player
         #read in starting board of game
@@ -129,20 +129,14 @@ class AI(BaseAI):
         # 3) print how much time remaining this AI has to calculate moves
         print("Time Remaining: " + str(self.player.time_remaining) + " ns")
 
+
+
         # 4) find best move w/ DLM
-        limit = 0
-        if len(self.game.pieces) <= 8:
-            limit = 4
-        elif len(self.game.pieces) <= 16:
-            limit = 3
-        elif len(self.game.pieces) <= 24:
-            limit = 2
-        else:
-            limit = 2
+        time_limit = 2
+        start = time.time()
+        next_move = self.IDM(current_state, start, time_limit)
 
-        next_move = self.DLM(current_state, 2)
-
-        print("move made:", next_move.toString(), " limit was: ", 2)
+        print("move made:", next_move.toString())
 
         for x in (self.player.pieces):
             if x.id == next_move.piece.id:
@@ -154,71 +148,112 @@ class AI(BaseAI):
         return True  # to signify we are done with our turn.
 
 
-    def IDM(self, state, max_limit):
-        for i in range (max_limit + 1):
-            best_act = self.DLM(state, i)
+    def IDM(self, state, start_time, time_limit):
+            # check time
+        now = time.time()
+        diff = 0
+        limit = 0
+        best_act = None
+        while(diff < time_limit):
+            limit += 1
+            alpha = None
+            beta = None
+            print("dlm called with lim = " + str(limit), end=" ")
+            best_act = self.DLM(state, limit, alpha, beta)
+            now = time.time()
+            diff = now - start_time
+            print(" - complete. time elapsed = " + str(diff))
+
+        print("time up, diff = " + str(diff) + " max was " + str(time_limit))
         return best_act
 
-    def DLM(self, state, limit):
+    def DLM(self, state, limit, alpha, beta):
+        print("DLM - player at move: " + state.player.toString() + " limit = " + str(limit))
         actions = find_actions(state, state.pieces)
         frontier = []
         for action in actions[0]:
             child = result(state, action)
-            if check_mate(child) == True:
-                return child.last_move
-            child.set_state_eval(self.calc_state_eval(child))
+            child_eval = self.MinV(child, limit - 1, alpha, beta)
+            child.set_state_eval(child_eval)
+
+            if not alpha or child_eval > alpha:
+                alpha = child_eval
+
             frontier.append(child)
-        if (limit > 0):
-            for child in frontier:
-                child.set_state_eval(self.MinV(child, limit - 1))
         random.shuffle(frontier)
+
         best_state = max(frontier, key=attrgetter('state_eval'))
         print("best action chose eval = ", best_state.state_eval)
         return best_state.last_move
 
 
 
-    def MaxV(self, parent, limit):
-        max_state = copy_state(parent, True)
-        if self.terminal_test(max_state) == False:
-            actions = find_actions(max_state, max_state.pieces)
-            if len(actions[0]) == 0:
+    def MaxV(self, parent, limit, alpha, beta):
+        #do MaxV
+        #print("MaxV - player at move: " + parent.player.toString())
+        if limit > 0:
+            max_state = copy_state(parent, True)
+            term = self.terminal_test(max_state)
+            if not term:
+                actions = find_actions(max_state, max_state.pieces)
+                frontier = []
+                for action in actions[0]:
+                    ###
+                    child = result(max_state, action)
+                    child_eval = self.MinV(child, limit-1, alpha, beta)
+                    child.set_state_eval(child_eval)
+                    if not alpha or child_eval > alpha:
+                        alpha = child_eval
+                    if beta and child_eval > beta:  #failhigh on prune
+                        return child_eval
+                    # if not alpha or child_eval > alpha:
+                    #     alpha = child_eval
+                    ###
+                    frontier.append(child)
+                random.shuffle(frontier)
+                max_state = max(frontier, key = attrgetter('state_eval'))
+                return max_state.state_eval
+            elif term == "Mate":
+                return 1000
+            elif term == "Stalemate" or term == "Draw":
                 return self.calc_state_eval(parent)
-            frontier = []
-            for action in actions[0]:
-                child = result(max_state, action)
-                child.set_state_eval(self.calc_state_eval(child))
-                frontier.append(child)
-            if (limit > 0):
-                for child in frontier:
-                    child.set_state_eval(self.MinV(child, limit - 1))
-            random.shuffle(frontier)
-            max_state = max(frontier, key = attrgetter('state_eval'))
+            else:
+                print("Error, terminal test returned invalid value")
+
         else:
-            max_state.set_state_eval(self.calc_state_eval(parent))
-        return max_state.state_eval
+            return self.calc_state_eval(parent)
 
+    def MinV(self, parent, limit, alpha, beta):
+        # do MinV
+        #print("MinV - player at move: " + parent.player.toString())
+        if limit > 0:
+            min_state = copy_state(parent, True)
+            term = self.terminal_test(min_state)
+            if not term:
+                actions = find_actions(min_state, min_state.pieces)
+                frontier = []
+                for action in actions[0]:
+                    ###
+                    child = result(min_state, action)
+                    child_eval = self.MaxV(child, limit - 1, alpha, beta)
+                    child.set_state_eval(child_eval)
+                    if not beta or child_eval < beta:
+                         beta = child_eval
+                    if alpha and child_eval < alpha:
+                        return child_eval
+                    frontier.append(child)
+                random.shuffle(frontier)
+                min_state = min(frontier, key=attrgetter('state_eval'))
 
-    def MinV(self, parent, limit):
-        min_state = copy_state(parent, True)
-        if self.terminal_test(min_state) == False:
-            actions = find_actions(min_state, min_state.pieces)
-            if len(actions[0]) == 0:
+                return min_state.state_eval
+            elif term == "Mate":
+                return -1000
+            elif term == "Stalemate" or term == "Draw":
                 return self.calc_state_eval(parent)
-            frontier = []
-            for action in actions[0]:
-                child = result(min_state, action)
-                child.set_state_eval(self.calc_state_eval(child))
-                frontier.append(child)
-            if (limit > 0):
-                for child in frontier:
-                    child.set_state_eval(self.MaxV(child, limit - 1))
-            random.shuffle(frontier)
-            min_state = min(frontier, key = attrgetter('state_eval'))
-            #print("min state chose eval = ", min_state.state_eval)
+            else:
+                print("Error, terminal test returned invalid value")
         else:
-            min_state.set_state_eval(self.calc_state_eval(parent))
-        return min_state.state_eval
+            return self.calc_state_eval(parent)
 
 
     def calc_state_eval(self, eval_state):
@@ -233,16 +268,19 @@ class AI(BaseAI):
         return calc
 
     def terminal_test(self, term_state):
-        '''mate = check_mate(term_state)
+        mate = check_mate(term_state)
         if term_state.player.check == True and mate == True:
+            print("terminal test: Mate found")
             return "Mate"
         if term_state.player.check == False and mate == True:
-            return "Stalemate"'''
+            print("terminal test: Stalemate found")
+            return "Stalemate"
         all_pieces = term_state.pieces + term_state.oppPieces
         if len(all_pieces) <= 3:
             for p in all_pieces:
                 if p.type != "King" or p.type != "Bishop" or p.type != "Knight":
                     return False
+            print("terminal test: Draw found")
             return "Draw"
         return False
 

@@ -2,7 +2,7 @@ from games.chess.classes import state
 from games.chess.classes import piece
 from games.chess.classes import move
 from games.chess.classes import player
-from copy import deepcopy
+import sys, traceback
 
 def find_actions(state, pieces):
    # if(state.player.id == state.my_id):
@@ -275,8 +275,9 @@ def result(state, move):
             oppPiece = resultant_state.board.get(p.key)
             if(oppPiece != None):
                 if oppPiece.type == "King":
-                    print("About to delete king! :( Very bad!")
+                    print("About to delete king! :( Very bad!**************************")
                     print("this move del king:", move.toString())
+                    traceback.print_stack()
                     return None
                 del resultant_state.board[p.key]
                 for o in waiter_pieces:
@@ -406,7 +407,7 @@ def in_check(state, myKing = None):
     return False
 
 def check_mate(state):
-    mate_state = copy_state(state, True)
+    mate_state = copy_state(state, False)
     opp_actions = find_actions(mate_state, mate_state.pieces)
     if len(opp_actions[0]) == 0:
         return True

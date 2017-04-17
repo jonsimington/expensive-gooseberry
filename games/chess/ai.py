@@ -136,7 +136,7 @@ class AI(BaseAI):
 
 
         # 4) find best move w/ DLM
-        time_limit = 2
+        time_limit = 5
         start = time.time()
         next_move = self.IDM(current_state, start, time_limit)
 

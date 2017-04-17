@@ -130,6 +130,10 @@ class AI(BaseAI):
         print("Time Remaining: " + str(self.player.time_remaining) + " ns")
 
 
+        # 3.5) Clear history table every 10 moves
+        if len(self.game.moves) % 10 == 0:
+            self.clear_history_table()
+
 
         # 4) find best move w/ DLM
         time_limit = 2
@@ -148,6 +152,28 @@ class AI(BaseAI):
         return True  # to signify we are done with our turn.
 
 
+    _history_table = {}
+
+    @property
+    def history_table(self):
+        return self._history_table
+
+    def get_HT_val(self, board):
+        return self._history_table.get(hash(frozenset(board)))
+
+    def clear_history_table(self):
+        self._history_table = {}
+
+    def add_to_HT(self, board, val):
+        key = hash(frozenset(board))
+        self._history_table[key] = val
+
+    def increase_HT_val(self, board):
+        key = hash(frozenset(board))
+        temp = self._history_table.get(key)
+        temp += 1
+        self.add_to_HT(board,temp)
+
     def IDM(self, state, start_time, time_limit):
             # check time
         now = time.time()
@@ -158,8 +184,9 @@ class AI(BaseAI):
             limit += 1
             alpha = None
             beta = None
+            q_limit = 2
             print("dlm called with lim = " + str(limit), end=" ")
-            best_act = self.DLM(state, limit, alpha, beta)
+            best_act = self.DLM(state, limit, q_limit, alpha, beta)
             now = time.time()
             diff = now - start_time
             print(" - complete. time elapsed = " + str(diff))
@@ -167,13 +194,13 @@ class AI(BaseAI):
         print("time up, diff = " + str(diff) + " max was " + str(time_limit))
         return best_act
 
-    def DLM(self, state, limit, alpha, beta):
+    def DLM(self, state, limit, q_limit, alpha, beta):
         print("DLM - player at move: " + state.player.toString() + " limit = " + str(limit))
         actions = find_actions(state, state.pieces)
         frontier = []
         for action in actions[0]:
             child = result(state, action)
-            child_eval = self.MinV(child, limit - 1, alpha, beta)
+            child_eval = self.MinV(child, limit - 1, q_limit, alpha, beta)
             child.set_state_eval(child_eval)
 
             if not alpha or child_eval > alpha:
@@ -183,35 +210,58 @@ class AI(BaseAI):
         random.shuffle(frontier)
 
         best_state = max(frontier, key=attrgetter('state_eval'))
+        if not self.get_HT_val(best_state.board):
+            self.add_to_HT(best_state.board, 1)
+        else:
+            self.increase_HT_val(best_state.board)
         print("best action chose eval = ", best_state.state_eval)
         return best_state.last_move
 
 
 
-    def MaxV(self, parent, limit, alpha, beta):
+    def MaxV(self, parent, limit, q_limit, alpha, beta):
         #do MaxV
         #print("MaxV - player at move: " + parent.player.toString())
-        if limit > 0:
+        #only continue if quiesant search or lim not reached
+        if limit > 0 or (not parent.quiesant and q_limit > 0):
             max_state = copy_state(parent, True)
             term = self.terminal_test(max_state)
             if not term:
+                parent_eval = self.calc_state_eval(parent)
                 actions = find_actions(max_state, max_state.pieces)
                 frontier = []
                 for action in actions[0]:
-                    ###
                     child = result(max_state, action)
-                    child_eval = self.MinV(child, limit-1, alpha, beta)
+                    #check if board in history table to sort frontier
+                    if self.get_HT_val(child.board):
+                        child.set_his_val(self.get_HT_val(child.board))
+                    frontier.append(child)
+                sorted(frontier, key=attrgetter('history_table_val'))
+                for child in frontier:
+                    if child.player_in_check:
+                        child.set_quiesant(False)
+                    if self.calc_state_eval(child) != parent_eval:
+                        child.set_quiesant(False)
+                    if limit == 0:
+                        #then quiesant search
+                        new_q_lim = q_limit
+                        q_limit -= 1
+                    child_eval = self.MinV(child, limit-1, q_limit, alpha, beta)
                     child.set_state_eval(child_eval)
                     if not alpha or child_eval > alpha:
                         alpha = child_eval
                     if beta and child_eval > beta:  #failhigh on prune
+                        #print("prune!")
+                        if not self.get_HT_val(child.board):
+                            self.add_to_HT(child.board, 1)
+                        else:
+                            self.increase_HT_val(child.board)
                         return child_eval
-                    # if not alpha or child_eval > alpha:
-                    #     alpha = child_eval
-                    ###
-                    frontier.append(child)
-                random.shuffle(frontier)
                 max_state = max(frontier, key = attrgetter('state_eval'))
+                if not self.get_HT_val(max_state.board):
+                    self.add_to_HT(max_state.board, 1)
+                else:
+                    self.increase_HT_val(max_state.board)
                 return max_state.state_eval
             elif term == "Mate":
                 return 1000
@@ -223,28 +273,48 @@ class AI(BaseAI):
         else:
             return self.calc_state_eval(parent)
 
-    def MinV(self, parent, limit, alpha, beta):
+    def MinV(self, parent, limit, q_limit, alpha, beta):
         # do MinV
         #print("MinV - player at move: " + parent.player.toString())
-        if limit > 0:
+        if limit > 0 or (not parent.quiesant and q_limit > 0):
             min_state = copy_state(parent, True)
             term = self.terminal_test(min_state)
             if not term:
+                parent_eval = self.calc_state_eval(parent)
                 actions = find_actions(min_state, min_state.pieces)
                 frontier = []
                 for action in actions[0]:
-                    ###
                     child = result(min_state, action)
-                    child_eval = self.MaxV(child, limit - 1, alpha, beta)
+                    #check if board in history table to sort frontier
+                    if self.get_HT_val(child.board):
+                        child.set_his_val(self.get_HT_val(child.board))
+                    frontier.append(child)
+                sorted(frontier, key=attrgetter('history_table_val'))
+                for child in frontier:
+                    if child.player_in_check:
+                        child.set_quiesant(False)
+                    if self.calc_state_eval(child) != parent_eval:
+                        child.set_quiesant(False)
+                    if limit == 0:
+                        #then quiesant search
+                        new_q_lim = q_limit
+                        q_limit -= 1
+                    child_eval = self.MaxV(child, limit - 1, q_limit, alpha, beta)
                     child.set_state_eval(child_eval)
                     if not beta or child_eval < beta:
                          beta = child_eval
                     if alpha and child_eval < alpha:
+                        #print("prune!")
+                        if not self.get_HT_val(child.board):
+                            self.add_to_HT(child.board, 1)
+                        else:
+                            self.increase_HT_val(child.board)
                         return child_eval
-                    frontier.append(child)
-                random.shuffle(frontier)
                 min_state = min(frontier, key=attrgetter('state_eval'))
-
+                if not self.get_HT_val(min_state.board):
+                    self.add_to_HT(min_state.board, 1)
+                else:
+                    self.increase_HT_val(min_state.board)
                 return min_state.state_eval
             elif term == "Mate":
                 return -1000

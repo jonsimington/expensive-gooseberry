@@ -112,6 +112,8 @@ class state:
     _last_move = None
     _player_in_check = False
     _state_eval = 0
+    _quiesant = True
+    _history_table_val = 0
 
 
     def __init__(self, player, opp, my_id):
@@ -201,6 +203,20 @@ class state:
 
     def set_state_eval(self, val):
         self._state_eval = val
+
+    @property
+    def quiesant(self):
+        return self._quiesant
+
+    def set_quiesant(self, quiesBool):
+        self._quiesant = quiesBool
+
+    @property
+    def history_table_val(self):
+        return self._history_table_val
+
+    def set_his_val(self, val):
+        self._history_table_val = val
 
 class move:
     _piece = None
